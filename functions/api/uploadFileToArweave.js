@@ -80,10 +80,10 @@ export async function onRequestPost(context) {
       token: 'base-eth',
       gatewayUrl: 'https://sepolia.base.org',
       paymentServiceConfig: {
-        url: 'https://payment.ardrive.dev',
+        url: 'https://payment.ardrive.io',
       },
       uploadServiceConfig: {
-        url: 'https://upload.ardrive.dev',
+        url: 'https://upload.ardrive.io',
       }
     });
 
