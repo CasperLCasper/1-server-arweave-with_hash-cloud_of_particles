@@ -20,8 +20,8 @@ export async function onRequestGet(context) {
       token: 'base-eth',
       // SALABOTS: gatewayUrl ir Arweave vārteja, nevis Base RPC!
       gatewayUrl: 'https://arweave.net', 
-      paymentServiceConfig: { url: 'https://payment.ardrive.io' },
-      uploadServiceConfig: { url: 'https://upload.ardrive.io' }
+      paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
+      uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
     });
 
     // Iegūstam bilanci drošā veidā
