@@ -60,7 +60,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    console.log(`🚀 Uploading file to Arweave via Turbo SDK...`);
+    console.log(`🚀 Uploading file to Arweave via Turbo SDK (Base Sepolia)...`);
 
     const arrayBuffer = await fileEntry.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -68,7 +68,7 @@ export async function onRequestPost(context) {
     // Aprēķina SHA-256 hash
     const fileHash = '0x' + crypto.createHash('sha256').update(buffer).digest('hex');
 
-    // Inicializē Turbo ar pareiziem iestatījumiem
+    // Inicializē Turbo ar Base Sepolia testnet
     const privateKey = env.ARWEAVE_STORAGE_KEY;
     if (!privateKey) {
       throw new Error('ARWEAVE_STORAGE_KEY not configured');
@@ -78,8 +78,7 @@ export async function onRequestPost(context) {
     const turbo = TurboFactory.authenticated({
       signer,
       token: 'base-eth',
-      // SALABOTS: gatewayUrl tagad ir Arweave vārteja, nevis Base Sepolia RPC!
-      gatewayUrl: 'https://arweave.net',
+      gatewayUrl: 'https://sepolia.base.org',
       paymentServiceConfig: {
         url: 'https://payment.ardrive.dev',
       },
