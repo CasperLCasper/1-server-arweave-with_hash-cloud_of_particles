@@ -5,7 +5,6 @@ import { checkRateLimit } from "../_lib/rateLimit.js";
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
-import axios from 'axios';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'];
 const MAX_SIZE = 50 * 1024 * 1024;
@@ -87,8 +86,8 @@ export async function onRequestPost(context) {
         const signer = new EthereumSigner(env.ARWEAVE_STORAGE_KEY);
         const turbo = TurboFactory.authenticated({
           signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
-          paymentServiceConfig: { url: 'https://payment.ardrive.io' },
-          uploadServiceConfig: { url: 'https://upload.ardrive.io' }
+          paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
+          uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
         });
 
         try {
