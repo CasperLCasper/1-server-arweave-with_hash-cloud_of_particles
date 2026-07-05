@@ -94,10 +94,10 @@ export async function onRequestPost(context) {
       token: 'base-eth',
       gatewayUrl: 'https://sepolia.base.org',
       paymentServiceConfig: {
-        url: 'https://payment.ardrive.io',
+        url: 'https://payment.ardrive.dev',
       },
       uploadServiceConfig: {
-        url: 'https://upload.ardrive.io',
+        url: 'https://upload.ardrive.dev',
       }
     });
 
