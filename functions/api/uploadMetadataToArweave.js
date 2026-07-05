@@ -1,4 +1,3 @@
-// functions/api/upload-metadata.js
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
 import { setCache } from "../_lib/cache.js";
@@ -92,7 +91,8 @@ export async function onRequestPost(context) {
     const turbo = TurboFactory.authenticated({
       signer,
       token: 'base-eth',
-      gatewayUrl: 'https://sepolia.base.org',
+      // SALABOTS: gatewayUrl tagad ir pareizā Arweave vārteja, nevis Base RPC!
+      gatewayUrl: 'https://arweave.net',
       paymentServiceConfig: {
         url: 'https://payment.ardrive.dev',
       },
@@ -102,10 +102,12 @@ export async function onRequestPost(context) {
     });
 
     const jsonString = JSON.stringify(metadata);
+    // Pārvēršam tekstu par Uint8Array, kas ir daudz drošāks sūtīšanai caur Turbo tīklu
+    const dataBuffer = new TextEncoder().encode(jsonString);
 
     // 7. Augšupielāde uz Arweave
     const uploadResult = await turbo.upload({
-      data: jsonString,
+      data: dataBuffer,
       dataItemOpts: {
         tags: [
           { name: "Content-Type", value: "application/json" },
