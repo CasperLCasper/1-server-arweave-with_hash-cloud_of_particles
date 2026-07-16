@@ -1,28 +1,73 @@
 // ============================================ //
-// ARWEAVE/TURBO STORAGE FUNCTIONS
+// ARWEAVE/TURBO STORAGE FUNCTIONS - CSP DROŠA VERSIJA
 // ============================================ //
 
 import { showToast, showProgress, setProgress, hideProgress } from './ui.js';
 import { ARWEAVE_GATEWAY } from './config.js';
 import { UI } from './state.js';
 
-// 🚀 LABOJUMS: Importējam JSZip tieši kā moduli no CDN. 
-// Tas garantē, ka bibliotēka būs ielādējusies un pieejama kā window.JSZip pirms funkciju izsaukšanas.
+// 🚀 Importējam JSZip tieši kā moduli no CDN
 import 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
 
 /**
  * Parāda augšupielādēto failu priekšskatījumu ar Arweave linkiem
  */
 export function showArweavePreview(imageId, videoId, metadataId) {
+  // ✅ Notīrām saturu droši, bez innerHTML
   if (UI.previewImage) {
-    UI.previewImage.innerHTML = '';
-    UI.previewVideo.innerHTML = '';
-    UI.previewMetadata.innerHTML = '';
-    if (imageId) UI.previewImage.innerHTML = `🖼️ Image: <a href="${ARWEAVE_GATEWAY}${imageId}" target="_blank">${imageId.substring(0, 20)}...</a>`;
-    if (videoId) UI.previewVideo.innerHTML = `🎬 Video: <a href="${ARWEAVE_GATEWAY}${videoId}" target="_blank">${videoId.substring(0, 20)}...</a>`;
-    if (metadataId) UI.previewMetadata.innerHTML = `📄 Metadata: <a href="${ARWEAVE_GATEWAY}${metadataId}" target="_blank">${metadataId.substring(0, 20)}...</a>`;
-    if (UI.ipfsPreview) UI.ipfsPreview.style.display = 'block';
-    setTimeout(() => { if (UI.ipfsPreview) UI.ipfsPreview.style.display = 'none'; }, 10000);
+    while (UI.previewImage.firstChild) {
+      UI.previewImage.removeChild(UI.previewImage.firstChild);
+    }
+  }
+  if (UI.previewVideo) {
+    while (UI.previewVideo.firstChild) {
+      UI.previewVideo.removeChild(UI.previewVideo.firstChild);
+    }
+  }
+  if (UI.previewMetadata) {
+    while (UI.previewMetadata.firstChild) {
+      UI.previewMetadata.removeChild(UI.previewMetadata.firstChild);
+    }
+  }
+  
+  // ✅ Veidojam elementus droši, bez innerHTML
+  if (imageId && UI.previewImage) {
+    UI.previewImage.appendChild(document.createTextNode('🖼️ Image: '));
+    const link = document.createElement('a');
+    link.href = `${ARWEAVE_GATEWAY}${imageId}`;
+    link.target = '_blank';
+    link.textContent = `${imageId.substring(0, 20)}...`;
+    UI.previewImage.appendChild(link);
+  }
+  
+  if (videoId && UI.previewVideo) {
+    UI.previewVideo.appendChild(document.createTextNode('🎬 Video: '));
+    const link = document.createElement('a');
+    link.href = `${ARWEAVE_GATEWAY}${videoId}`;
+    link.target = '_blank';
+    link.textContent = `${videoId.substring(0, 20)}...`;
+    UI.previewVideo.appendChild(link);
+  }
+  
+  if (metadataId && UI.previewMetadata) {
+    UI.previewMetadata.appendChild(document.createTextNode('📄 Metadata: '));
+    const link = document.createElement('a');
+    link.href = `${ARWEAVE_GATEWAY}${metadataId}`;
+    link.target = '_blank';
+    link.textContent = `${metadataId.substring(0, 20)}...`;
+    UI.previewMetadata.appendChild(link);
+  }
+  
+  // ✅ IPFS Preview redzamība - izmanto klases
+  if (UI.ipfsPreview) {
+    UI.ipfsPreview.classList.remove('ipfs-preview-hidden');
+    UI.ipfsPreview.classList.add('ipfs-preview-visible');
+    setTimeout(() => { 
+      if (UI.ipfsPreview) {
+        UI.ipfsPreview.classList.add('ipfs-preview-hidden');
+        UI.ipfsPreview.classList.remove('ipfs-preview-visible');
+      }
+    }, 10000);
   }
 }
 
@@ -45,7 +90,6 @@ export function downloadFile(blob, filename) {
  * Lejupielādē visus failus kā ZIP arhīvu
  */
 export async function downloadAllFiles(files) {
-  // 🎯 LABOJUMS: Pārliecināmies, ka izsaucam JSZip caur globālo window objektu
   if (!window.JSZip) {
     throw new Error("JSZip bibliotēka vēl nav pilnībā ielādējusies. Lūdzu, mēģiniet vēlreiz!");
   }
