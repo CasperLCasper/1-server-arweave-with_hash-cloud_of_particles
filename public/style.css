@@ -357,6 +357,39 @@ button.loading::after {
 .ipfs-preview a { color: #0ff; word-break: break-all; }
 
 /* =======================================================
+   BALANCE DISPLAY STILI
+   ======================================================= */
+.balance-display {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.balance-display.checking {
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.balance-display.sufficient {
+  background: rgba(0, 255, 100, 0.1);
+  color: #44ff88;
+  border: 1px solid rgba(0, 255, 100, 0.3);
+}
+
+.balance-display.insufficient {
+  background: rgba(255, 100, 0, 0.1);
+  color: #ff8844;
+  border: 1px solid rgba(255, 100, 0, 0.3);
+}
+
+/* =======================================================
    ABOUT POGA UN MODAL (IZLECOŠAIS LOGS) - MODERN CHAT REŽĪMS
    ======================================================= */
 .about-button {
@@ -405,7 +438,7 @@ button.loading::after {
   margin: 10vh auto;
   padding: 35px;             
   border: 1px solid #e2e8f0; 
-  border-radius: 16px;       /* ✅ NOAPAĻOTI STŪRI */
+  border-radius: 16px;
   width: 85%;
   max-width: 720px;          
   max-height: 80vh;
@@ -464,6 +497,44 @@ button.loading::after {
 @keyframes fadeInModal {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* =======================================================
+   MODAL STYLES (CSP DROŠAS KLASES - NO INLINE UZ KLASĒM)
+   ======================================================= */
+.modal-divider {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin: 20px 0;
+}
+
+.modal-list {
+  padding-left: 0;
+}
+
+.modal-list-no-bullets {
+  list-style: none;
+}
+
+.modal-list-bullets {
+  list-style: square;
+  padding-left: 20px;
+}
+
+.modal-list-ol {
+  padding-left: 20px;
+}
+
+.modal-list-mb-20 {
+  margin-bottom: 20px;
+}
+
+.modal-list-item {
+  margin-bottom: 8px;
+}
+
+.modal-list-item-sm {
+  margin-bottom: 6px;
 }
 
 /* =======================================================
