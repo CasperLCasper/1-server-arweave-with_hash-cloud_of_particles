@@ -7,7 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" crossorigin="anonymous" />
   <link rel="stylesheet" href="/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-9a997d91e6b91c95b6c9867c29e7c3b28b26e0e7bc2374e64f8de2e9b0bfacbb" crossorigin="anonymous"></script>
+  <!-- ✅ JSZip - noņemts integrity (vai lejupielādē lokāli) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <button id="aboutBtn" class="about-button">ℹ About</button>
@@ -75,6 +76,7 @@
   <div id="ipfsPreview" class="ipfs-preview"><strong>✅ NFT Created!</strong><br><span id="previewImage"></span><br><span id="previewVideo"></span><br><span id="previewMetadata"></span></div>
   <div id="styleIndicator" class="active-style-indicator"><span id="indicatorText">⭐ CLASSIC MODE - Original visualization</span></div>
 
+  <!-- ✅ About Modal - VISI inline stili aizstāti ar klasēm -->
   <div id="aboutModal" class="modal">
     <div class="modal-content">
       <span class="close-modal">&times;</span>
@@ -83,53 +85,53 @@
       <p><strong>Wallet Visualizer</strong> transforms your wallet into unique visual art and lets you save it as an NFT with verifiable authenticity — permanently stored on Arweave.</p>
       <p>Connect your wallet, pick a theme, and the platform generates your personalized wallet visualization — an image and a 15-second video.</p>
       
-      <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 20px 0;">
+      <hr class="modal-divider">
 
       <h3>What data generates the image?</h3>
       <p>The visualization is created using your real blockchain wallet data:</p>
-      <ul style="list-style: none; padding-left: 0; margin-bottom: 20px;">
-        <li style="margin-bottom: 8px;">💰 <strong>Balance</strong> — determines particle size and movement intensity</li>
-        <li style="margin-bottom: 8px;">🪙 <strong>Token count</strong> — influences particle quantity and connection density</li>
-        <li style="margin-bottom: 8px;">🔄 <strong>Transaction count</strong> — sets visualization complexity and speed</li>
-        <li style="margin-bottom: 8px;">🔑 <strong>Wallet address</strong> — serves as a unique seed for unrepeatable patterns</li>
-        <li style="margin-bottom: 8px;">🎨 <strong>Chosen theme</strong> — determines color palette and visual style</li>
+      <ul class="modal-list modal-list-no-bullets modal-list-mb-20">
+        <li class="modal-list-item">💰 <strong>Balance</strong> — determines particle size and movement intensity</li>
+        <li class="modal-list-item">🪙 <strong>Token count</strong> — influences particle quantity and connection density</li>
+        <li class="modal-list-item">🔄 <strong>Transaction count</strong> — sets visualization complexity and speed</li>
+        <li class="modal-list-item">🔑 <strong>Wallet address</strong> — serves as a unique seed for unrepeatable patterns</li>
+        <li class="modal-list-item">🎨 <strong>Chosen theme</strong> — determines color palette and visual style</li>
       </ul>
 
       <h3>How it works?</h3>
-      <ol style="padding-left: 20px; margin-bottom: 20px;">
-        <li style="margin-bottom: 6px;"><strong>Connect wallet</strong> — use any Web3 wallet (MetaMask, Enkrypt, etc.)</li>
-        <li style="margin-bottom: 6px;"><strong>Choose blockchain</strong> — multiple chains supported for data reading</li>
-        <li style="margin-bottom: 6px;"><strong>Click "Generate NFT"</strong> — platform creates image, video, and metadata</li>
-        <li style="margin-bottom: 6px;"><strong>Receive files</strong> — all files saved to your computer as a ZIP archive</li>
-        <li style="margin-bottom: 6px;"><strong>Files stored on Arweave</strong> — permanent, decentralized, pay-once-store-forever</li>
-        <li style="margin-bottom: 6px;"><strong>Minting on Base</strong> — artwork is officially minted as NFT with SHA256 hash recorded on-chain</li>
+      <ol class="modal-list modal-list-ol modal-list-mb-20">
+        <li class="modal-list-item-sm"><strong>Connect wallet</strong> — use any Web3 wallet (MetaMask, Enkrypt, etc.)</li>
+        <li class="modal-list-item-sm"><strong>Choose blockchain</strong> — multiple chains supported for data reading</li>
+        <li class="modal-list-item-sm"><strong>Click "Generate NFT"</strong> — platform creates image, video, and metadata</li>
+        <li class="modal-list-item-sm"><strong>Receive files</strong> — all files saved to your computer as a ZIP archive</li>
+        <li class="modal-list-item-sm"><strong>Files stored on Arweave</strong> — permanent, decentralized, pay-once-store-forever</li>
+        <li class="modal-list-item-sm"><strong>Minting on Base</strong> — artwork is officially minted as NFT with SHA256 hash recorded on-chain</li>
       </ol>
 
       <h3>What do you get?</h3>
-      <ul style="list-style: none; padding-left: 0; margin-bottom: 20px;">
-        <li style="margin-bottom: 6px;">🖼️ <strong>Image</strong> — wallet visualization in PNG format</li>
-        <li style="margin-bottom: 6px;">🎬 <strong>Video</strong> — 15-second animation</li>
-        <li style="margin-bottom: 6px;">📄 <strong>Metadata</strong> — JSON file with NFT description and attributes</li>
-        <li style="margin-bottom: 6px;">📦 <strong>ZIP archive</strong> — all three files at once on your computer</li>
-        <li style="margin-bottom: 6px;">🔵 <strong>NFT on Base</strong> — digital artwork recorded directly on Base network</li>
-        <li style="margin-bottom: 6px;">⛓️ <strong>SHA256 hash on-chain</strong> — mathematically verify file authenticity anytime</li>
-        <li style="margin-bottom: 6px;">🐘 <strong>Arweave Permanent Storage</strong> — data stored forever on the permaweb</li>
+      <ul class="modal-list modal-list-no-bullets modal-list-mb-20">
+        <li class="modal-list-item-sm">🖼️ <strong>Image</strong> — wallet visualization in PNG format</li>
+        <li class="modal-list-item-sm">🎬 <strong>Video</strong> — 15-second animation</li>
+        <li class="modal-list-item-sm">📄 <strong>Metadata</strong> — JSON file with NFT description and attributes</li>
+        <li class="modal-list-item-sm">📦 <strong>ZIP archive</strong> — all three files at once on your computer</li>
+        <li class="modal-list-item-sm">🔵 <strong>NFT on Base</strong> — digital artwork recorded directly on Base network</li>
+        <li class="modal-list-item-sm">⛓️ <strong>SHA256 hash on-chain</strong> — mathematically verify file authenticity anytime</li>
+        <li class="modal-list-item-sm">🐘 <strong>Arweave Permanent Storage</strong> — data stored forever on the permaweb</li>
       </ul>
 
       <h3>Why Base network and hash matter?</h3>
       <p>Each NFT gets a SHA256 hash — a unique digital fingerprint, all on Base:</p>
-      <ul style="list-style: square; padding-left: 20px; margin-bottom: 20px;">
-        <li style="margin-bottom: 6px;"><strong>Low cost & speed:</strong> Thanks to Base (Ethereum L2), NFT minting is lightning-fast with minimal gas fees</li>
-        <li style="margin-bottom: 6px;">Hash is permanently recorded in blockchain smart contract</li>
-        <li style="margin-bottom: 6px;">Anyone can verify if a file exactly matches the original</li>
-        <li style="margin-bottom: 6px;">Even if storage services change, the hash remains as immutable proof of ownership</li>
+      <ul class="modal-list modal-list-bullets modal-list-mb-20">
+        <li class="modal-list-item-sm"><strong>Low cost & speed:</strong> Thanks to Base (Ethereum L2), NFT minting is lightning-fast with minimal gas fees</li>
+        <li class="modal-list-item-sm">Hash is permanently recorded in blockchain smart contract</li>
+        <li class="modal-list-item-sm">Anyone can verify if a file exactly matches the original</li>
+        <li class="modal-list-item-sm">Even if storage services change, the hash remains as immutable proof of ownership</li>
       </ul>
 
       <h3>Are files secure?</h3>
-      <ul style="list-style: none; padding-left: 0;">
-        <li style="margin-bottom: 6px;">💻 <strong>Saved on your computer</strong> — immediately after creation</li>
-        <li style="margin-bottom: 6px;">🐘 <strong>Uploaded to Arweave</strong> — permanent, decentralized storage on the permaweb</li>
-        <li style="margin-bottom: 6px;">🛡️ <strong>Protected by hash on Base</strong> — any file is mathematically verifiable on the secure Base blockchain</li>
+      <ul class="modal-list modal-list-no-bullets">
+        <li class="modal-list-item-sm">💻 <strong>Saved on your computer</strong> — immediately after creation</li>
+        <li class="modal-list-item-sm">🐘 <strong>Uploaded to Arweave</strong> — permanent, decentralized storage on the permaweb</li>
+        <li class="modal-list-item-sm">🛡️ <strong>Protected by hash on Base</strong> — any file is mathematically verifiable on the secure Base blockchain</li>
       </ul>
     </div>
   </div>
