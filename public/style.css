@@ -357,36 +357,32 @@ button.loading::after {
 .ipfs-preview a { color: #0ff; word-break: break-all; }
 
 /* =======================================================
-   BALANCE DISPLAY STILI
+   BALANCE DISPLAY STILI (TĪRS, BEZ RĀMĪŠA, BEZ ZAĻĀS)
    ======================================================= */
 .balance-display {
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 500;
   text-align: center;
   transition: all 0.3s ease;
+  background: none;
+  border: none;
+  border-radius: 0;
 }
 
 .balance-display.checking {
-  background: rgba(255, 255, 255, 0.05);
   color: #aaa;
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .balance-display.sufficient {
-  background: rgba(0, 255, 100, 0.1);
-  color: #44ff88;
-  border: 1px solid rgba(0, 255, 100, 0.3);
+  color: #ffffff;
 }
 
 .balance-display.insufficient {
-  background: rgba(255, 100, 0, 0.1);
   color: #ff8844;
-  border: 1px solid rgba(255, 100, 0, 0.3);
 }
 
 /* =======================================================
