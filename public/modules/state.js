@@ -2,7 +2,6 @@
 // APP STATE
 // ============================================ //
 
-// App stāvokļa objekts
 export const AppState = {
   provider: null,
   signer: null,
@@ -29,10 +28,8 @@ export const AppState = {
   particleCache: new Map()
 };
 
-// UI elementu references – tagad const, jo mēs nemainīsim pašu objektu, tikai tā īpašības
 export const UI = {};
 
-// Inicializē UI references (pievieno īpašības esošajam objektam)
 export function initUI() {
   UI.connectBtn = document.getElementById('connectBtn');
   UI.renderBtn = document.getElementById('renderBtn');
