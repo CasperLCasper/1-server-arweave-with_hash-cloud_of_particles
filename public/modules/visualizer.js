@@ -1,5 +1,5 @@
 // ============================================ //
-// VISUALIZER FUNCTIONS - CSP DROŠA VERSIJA
+// VISUALIZER FUNCTIONS
 // ============================================ //
 
 import { UI } from './state.js';
@@ -21,10 +21,8 @@ export function resizeCanvas(app) {
   
   UI.canvas.width = width;
   UI.canvas.height = height;
-  // ✅ Canvas izmēri caur CSS - šis ir atļauts, jo maina tikai izmērus
-  UI.canvas.setAttribute('data-width', width);
-  UI.canvas.setAttribute('data-height', height);
-  UI.canvas.classList.add('canvas-responsive');
+  UI.canvas.style.width = '100%';
+  UI.canvas.style.height = 'auto';
   app.canvasWidth = width;
   app.canvasHeight = height;
   app.ctx = UI.canvas.getContext('2d');
@@ -218,7 +216,6 @@ export function drawFrame(app, frame, showTokensFrame) {
     addon.drawExtraEffects(ctx, W, H, frame, app.particles, cx0, cy0);
   }
   
-  // ✅ RĀDA TEKSTU TIKAI UZ CANVAS (dzīvajā skatā), NE uz ģenerētā attēla/video
   if (showTokensFrame && app.showInfo) {
     const currentChainConfig = VIZ_CHAINS[app.currentVizChain];
     const isAmoy = app.currentVizChain === 'polygonAmoy' || currentChainConfig?.chainIdHex?.toLowerCase() === '0x13882';
@@ -251,7 +248,6 @@ export function drawFrame(app, frame, showTokensFrame) {
 }
 
 export function animate(app, frame = 0) { 
-  // ✅ Canvas skatā rāda tekstu (showInfo = true)
   drawFrame(app, frame, true); 
   app.animFrameId = requestAnimationFrame(() => animate(app, frame + 1)); 
 }
@@ -332,7 +328,7 @@ export async function renderSnapshot(app, chain) {
     if (!running) return;
     const targetProgress = currentStep / totalSteps;
     visualProgress += (targetProgress - visualProgress) * 0.05;
-    setProgress(visualProgress * 100);
+    UI.progressBar.style.transform = `scaleX(${visualProgress})`;
     requestAnimationFrame(animateProgress);
   };
   requestAnimationFrame(animateProgress);
@@ -344,15 +340,13 @@ export async function renderSnapshot(app, chain) {
       currentStep++;
     }
     
-    // ✅ Token list konteiners - izmanto CSS klasi
     if (app.showInfo && UI.tokenListContainer) { 
-      UI.tokenListContainer.classList.remove('token-list-hidden');
-      UI.tokenListContainer.classList.add('token-list-visible');
+      UI.tokenListContainer.style.display = 'block'; 
       updateTokenListUI(app.tokens); 
     }
     
     running = false;
-    setProgress(100);
+    UI.progressBar.style.transform = 'scaleX(1)';
     showToast(`Ready! ${app.tokens.length} assets found on ${chain} (${app.nftCenters.length} NFTs)`, 'success');
     hideProgress();
     animate(app);
