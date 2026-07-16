@@ -1,5 +1,6 @@
 // ============================================ //
-// UI FUNCTIONS
+// UI FUNCTIONS - CSP DROŠA VERSIJA
+// Dizains nemainīgs, tikai bez inline stiliem
 // ============================================ //
 
 import { UI } from './state.js';
@@ -18,20 +19,26 @@ export function showToast(message, type = 'info') {
 }
 
 export function showProgress() { 
-  UI.progressBarContainer.style.display = 'block'; 
-  UI.progressBar.style.transform = 'scaleX(0)'; 
+  if (!UI.progressBarContainer || !UI.progressBar) return;
+  UI.progressBarContainer.classList.remove('progress-hidden');
+  UI.progressBar.classList.remove('progress-full');
+  UI.progressBar.classList.add('progress-empty');
 }
 
 export function hideProgress() { 
-  UI.progressBar.style.transform = 'scaleX(1)'; 
+  if (!UI.progressBarContainer || !UI.progressBar) return;
+  UI.progressBar.classList.remove('progress-empty');
+  UI.progressBar.classList.add('progress-full');
   setTimeout(() => { 
-    UI.progressBarContainer.style.display = 'none'; 
-    UI.progressBar.style.transform = 'scaleX(0)'; 
+    UI.progressBarContainer.classList.add('progress-hidden');
+    UI.progressBar.classList.remove('progress-full');
+    UI.progressBar.classList.add('progress-empty');
   }, 500); 
 }
 
 export function setProgress(percent) { 
-  UI.progressBar.style.transform = `scaleX(${Math.min(percent / 100, 1)})`; 
+  if (!UI.progressBar) return;
+  UI.progressBar.style.transform = `scaleX(${Math.min(percent / 100, 1)})`;
 }
 
 export function setButtonLoading(button, isLoading) { 
@@ -41,23 +48,46 @@ export function setButtonLoading(button, isLoading) {
 
 export function updateTokenListUI(tokens) {
   if (!UI.tokenListContent) return;
+  
+  // Notīrām saturu droši, bez innerHTML
+  while (UI.tokenListContent.firstChild) {
+    UI.tokenListContent.removeChild(UI.tokenListContent.firstChild);
+  }
+  
   if (!tokens || tokens.length === 0) { 
-    UI.tokenListContent.innerHTML = '<tr><td colspan="2" style="color:#777;">No assets<\/td><\/tr>'; 
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.setAttribute('colspan', '2');
+    td.classList.add('no-assets-cell');
+    td.textContent = 'No assets';
+    tr.appendChild(td);
+    UI.tokenListContent.appendChild(tr);
     return; 
   }
+  
   const fragment = document.createDocumentFragment();
   const maxTokens = tokens.length;
   tokens.slice(0, maxTokens).forEach(t => {
     const tr = document.createElement('tr');
-    const addrTd = document.createElement('td'); 
+    
+    const addrTd = document.createElement('td');
     addrTd.textContent = t.address;
     addrTd.title = t.address;
-    const balTd = document.createElement('td'); 
+    
+    const balTd = document.createElement('td');
     balTd.textContent = t.isNFT ? t.balance : t.balance.toFixed(4);
-    tr.appendChild(addrTd); 
+    
+    tr.appendChild(addrTd);
     tr.appendChild(balTd);
     fragment.appendChild(tr);
   });
-  UI.tokenListContent.innerHTML = '';
+  
   UI.tokenListContent.appendChild(fragment);
+}
+
+export function safeClearElement(element) {
+  if (!element) return;
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
 }
