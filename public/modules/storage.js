@@ -1,79 +1,53 @@
 // ============================================ //
-// ARWEAVE/TURBO STORAGE FUNCTIONS - CSP DROŠA VERSIJA
+// ARWEAVE/TURBO STORAGE FUNCTIONS
 // ============================================ //
 
 import { showToast, showProgress, setProgress, hideProgress } from './ui.js';
 import { ARWEAVE_GATEWAY } from './config.js';
 import { UI } from './state.js';
 
-// 🚀 Importējam JSZip tieši kā moduli no CDN
 import 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
 
-/**
- * Parāda augšupielādēto failu priekšskatījumu ar Arweave linkiem
- */
 export function showArweavePreview(imageId, videoId, metadataId) {
-  // ✅ Notīrām saturu droši, bez innerHTML
   if (UI.previewImage) {
-    while (UI.previewImage.firstChild) {
-      UI.previewImage.removeChild(UI.previewImage.firstChild);
+    while (UI.previewImage.firstChild) UI.previewImage.removeChild(UI.previewImage.firstChild);
+    if (imageId) {
+      UI.previewImage.appendChild(document.createTextNode('🖼️ Image: '));
+      const a = document.createElement('a');
+      a.href = `${ARWEAVE_GATEWAY}${imageId}`;
+      a.target = '_blank';
+      a.textContent = `${imageId.substring(0, 20)}...`;
+      UI.previewImage.appendChild(a);
     }
   }
   if (UI.previewVideo) {
-    while (UI.previewVideo.firstChild) {
-      UI.previewVideo.removeChild(UI.previewVideo.firstChild);
+    while (UI.previewVideo.firstChild) UI.previewVideo.removeChild(UI.previewVideo.firstChild);
+    if (videoId) {
+      UI.previewVideo.appendChild(document.createTextNode('🎬 Video: '));
+      const a = document.createElement('a');
+      a.href = `${ARWEAVE_GATEWAY}${videoId}`;
+      a.target = '_blank';
+      a.textContent = `${videoId.substring(0, 20)}...`;
+      UI.previewVideo.appendChild(a);
     }
   }
   if (UI.previewMetadata) {
-    while (UI.previewMetadata.firstChild) {
-      UI.previewMetadata.removeChild(UI.previewMetadata.firstChild);
+    while (UI.previewMetadata.firstChild) UI.previewMetadata.removeChild(UI.previewMetadata.firstChild);
+    if (metadataId) {
+      UI.previewMetadata.appendChild(document.createTextNode('📄 Metadata: '));
+      const a = document.createElement('a');
+      a.href = `${ARWEAVE_GATEWAY}${metadataId}`;
+      a.target = '_blank';
+      a.textContent = `${metadataId.substring(0, 20)}...`;
+      UI.previewMetadata.appendChild(a);
     }
   }
-  
-  // ✅ Veidojam elementus droši, bez innerHTML
-  if (imageId && UI.previewImage) {
-    UI.previewImage.appendChild(document.createTextNode('🖼️ Image: '));
-    const link = document.createElement('a');
-    link.href = `${ARWEAVE_GATEWAY}${imageId}`;
-    link.target = '_blank';
-    link.textContent = `${imageId.substring(0, 20)}...`;
-    UI.previewImage.appendChild(link);
-  }
-  
-  if (videoId && UI.previewVideo) {
-    UI.previewVideo.appendChild(document.createTextNode('🎬 Video: '));
-    const link = document.createElement('a');
-    link.href = `${ARWEAVE_GATEWAY}${videoId}`;
-    link.target = '_blank';
-    link.textContent = `${videoId.substring(0, 20)}...`;
-    UI.previewVideo.appendChild(link);
-  }
-  
-  if (metadataId && UI.previewMetadata) {
-    UI.previewMetadata.appendChild(document.createTextNode('📄 Metadata: '));
-    const link = document.createElement('a');
-    link.href = `${ARWEAVE_GATEWAY}${metadataId}`;
-    link.target = '_blank';
-    link.textContent = `${metadataId.substring(0, 20)}...`;
-    UI.previewMetadata.appendChild(link);
-  }
-  
-  // ✅ IPFS Preview redzamība - izmanto klases
   if (UI.ipfsPreview) {
-    UI.ipfsPreview.classList.remove('ipfs-preview-hidden');
-    UI.ipfsPreview.classList.add('ipfs-preview-visible');
-    setTimeout(() => { 
-      if (UI.ipfsPreview) {
-        UI.ipfsPreview.classList.add('ipfs-preview-hidden');
-        UI.ipfsPreview.classList.remove('ipfs-preview-visible');
-      }
-    }, 10000);
+    UI.ipfsPreview.style.display = 'block';
+    setTimeout(() => { if (UI.ipfsPreview) UI.ipfsPreview.style.display = 'none'; }, 10000);
   }
 }
 
-/**
- * Lejupielādē vienu failu lokāli
- */
 export function downloadFile(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -86,9 +60,6 @@ export function downloadFile(blob, filename) {
   console.log(`💾 Lejupielādēts: ${filename}`);
 }
 
-/**
- * Lejupielādē visus failus kā ZIP arhīvu
- */
 export async function downloadAllFiles(files) {
   if (!window.JSZip) {
     throw new Error("JSZip bibliotēka vēl nav pilnībā ielādējusies. Lūdzu, mēģiniet vēlreiz!");
@@ -116,9 +87,6 @@ export async function downloadAllFiles(files) {
   console.log(`💾 ZIP arhīvs saglabāts ar ${files.length} failiem`);
 }
 
-/**
- * Aprēķina SHA-256 hash no Blob datiem (klienta pusē)
- */
 export async function calculateHashFromBlob(blob) {
   const buffer = await blob.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
@@ -127,9 +95,6 @@ export async function calculateHashFromBlob(blob) {
   return hashHex;
 }
 
-/**
- * Augšupielādē failu caur serveri uz Arweave/Turbo
- */
 export async function uploadFileToArweave(file) {
   showToast('Uploading file to Arweave (Turbo)...', 'info');
   
@@ -160,9 +125,6 @@ export async function uploadFileToArweave(file) {
   return result;
 }
 
-/**
- * Augšupielādē metadatus caur serveri uz Arweave/Turbo
- */
 export async function uploadMetadataToArweave(metadata) {
   showToast('Preparing metadata for Arweave...', 'info');
   
@@ -178,9 +140,6 @@ export async function uploadMetadataToArweave(metadata) {
   return await response.json();
 }
 
-/**
- * Augšupielādē attēlu no canvas uz Arweave
- */
 export async function uploadImageToArweave(canvas) {
   showToast('Preparing image for Arweave...', 'info');
   return new Promise((resolve, reject) => {
@@ -195,9 +154,6 @@ export async function uploadImageToArweave(canvas) {
   });
 }
 
-/**
- * Ieraksta video un augšupielādē uz Arweave
- */
 export async function uploadVideoToArweave(stream, duration = 15000) {
   showToast('Recording video for Arweave...', 'info');
   let mimeType = 'video/webm';
