@@ -1,5 +1,5 @@
 // ============================================ //
-// WEB3 FUNCTIONS - CSP DROŠA VERSIJA
+// WEB3 FUNCTIONS
 // ============================================ //
 
 import { VIZ_CHAINS, MINT_CHAIN, getAllRpcUrls, getRpcUrl } from './chains.js';
@@ -16,17 +16,14 @@ export async function updateChainStatus() {
     const selectedChain = VIZ_CHAINS[selectedChainKey];
     
     if (selectedChain && chainIdHex && chainIdHex.toLowerCase() === selectedChain.chainIdHex.toLowerCase()) {
-      UI.chainStatus.classList.remove('disconnected');
-      UI.chainStatus.classList.add('connected');
+      UI.chainStatus.className = 'chain-status connected';
       UI.chainStatus.title = `✓ Connected to ${selectedChain.name}`;
     } else {
-      UI.chainStatus.classList.remove('connected');
-      UI.chainStatus.classList.add('disconnected');
+      UI.chainStatus.className = 'chain-status disconnected';
       UI.chainStatus.title = '⚠️ Please switch network in your wallet';
     }
   } catch (error) {
-    UI.chainStatus.classList.remove('connected');
-    UI.chainStatus.classList.add('disconnected');
+    UI.chainStatus.className = 'chain-status disconnected';
     UI.chainStatus.title = '❌ Unable to detect network';
   }
 }
@@ -108,8 +105,7 @@ async function updateBalanceDisplay(account) {
   
   try {
     balanceDisplay.textContent = '💰 Checking balance...';
-    balanceDisplay.classList.remove('sufficient', 'insufficient');
-    balanceDisplay.classList.add('checking');
+    balanceDisplay.className = 'balance-display checking';
     
     const selectedChainKey = UI.chainSelect ? UI.chainSelect.value : null;
     const selectedChain = VIZ_CHAINS[selectedChainKey];
@@ -134,15 +130,12 @@ async function updateBalanceDisplay(account) {
     
     if (balanceWei >= mintPriceWei) {
       balanceDisplay.textContent = `✅ Balance: ${balanceFormatted} Base ETH (enough to mint)`;
-      balanceDisplay.classList.remove('checking', 'insufficient');
-      balanceDisplay.classList.add('sufficient');
+      balanceDisplay.className = 'balance-display sufficient';
     } else {
       balanceDisplay.textContent = `⚠️ Balance: ${balanceFormatted} Base ETH (need ${mintPriceFormatted} Base ETH to mint)`;
-      balanceDisplay.classList.remove('checking', 'sufficient');
-      balanceDisplay.classList.add('insufficient');
+      balanceDisplay.className = 'balance-display insufficient';
     }
     
-    // ✅ KONTROLĒ GENERATE NFT POGU
     if (UI.generateNFTBtn) {
       if (balanceWei >= mintPriceWei) {
         UI.generateNFTBtn.disabled = false;
@@ -155,10 +148,8 @@ async function updateBalanceDisplay(account) {
   } catch (error) {
     console.error("Balance check failed:", error);
     balanceDisplay.textContent = `❌ Unable to check balance. Please refresh.`;
-    balanceDisplay.classList.remove('checking', 'sufficient');
-    balanceDisplay.classList.add('insufficient');
+    balanceDisplay.className = 'balance-display insufficient';
     
-    // Kļūdas gadījumā deaktivizē pogu
     if (UI.generateNFTBtn) {
       UI.generateNFTBtn.disabled = true;
       UI.generateNFTBtn.title = 'Unable to check balance';
