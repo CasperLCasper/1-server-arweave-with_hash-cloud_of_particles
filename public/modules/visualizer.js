@@ -1,5 +1,5 @@
 // ============================================ //
-// VISUALIZER FUNCTIONS
+// VISUALIZER FUNCTIONS - CSP DROŠA VERSIJA
 // ============================================ //
 
 import { UI } from './state.js';
@@ -21,8 +21,10 @@ export function resizeCanvas(app) {
   
   UI.canvas.width = width;
   UI.canvas.height = height;
-  UI.canvas.style.width = '100%';
-  UI.canvas.style.height = 'auto';
+  // ✅ Canvas izmēri caur CSS - šis ir atļauts, jo maina tikai izmērus
+  UI.canvas.setAttribute('data-width', width);
+  UI.canvas.setAttribute('data-height', height);
+  UI.canvas.classList.add('canvas-responsive');
   app.canvasWidth = width;
   app.canvasHeight = height;
   app.ctx = UI.canvas.getContext('2d');
@@ -330,7 +332,7 @@ export async function renderSnapshot(app, chain) {
     if (!running) return;
     const targetProgress = currentStep / totalSteps;
     visualProgress += (targetProgress - visualProgress) * 0.05;
-    UI.progressBar.style.transform = `scaleX(${visualProgress})`;
+    setProgress(visualProgress * 100);
     requestAnimationFrame(animateProgress);
   };
   requestAnimationFrame(animateProgress);
@@ -342,13 +344,15 @@ export async function renderSnapshot(app, chain) {
       currentStep++;
     }
     
+    // ✅ Token list konteiners - izmanto CSS klasi
     if (app.showInfo && UI.tokenListContainer) { 
-      UI.tokenListContainer.style.display = 'block'; 
+      UI.tokenListContainer.classList.remove('token-list-hidden');
+      UI.tokenListContainer.classList.add('token-list-visible');
       updateTokenListUI(app.tokens); 
     }
     
     running = false;
-    UI.progressBar.style.transform = 'scaleX(1)';
+    setProgress(100);
     showToast(`Ready! ${app.tokens.length} assets found on ${chain} (${app.nftCenters.length} NFTs)`, 'success');
     hideProgress();
     animate(app);
