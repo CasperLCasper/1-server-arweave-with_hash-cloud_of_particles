@@ -1,5 +1,5 @@
 // ============================================ //
-// RECORDING FUNCTIONS
+// RECORDING FUNCTIONS - CSP DROŠA VERSIJA
 // ============================================ //
 
 import { UI } from './state.js';
@@ -16,10 +16,27 @@ export function pickSupportedMimeType() {
   return '';
 }
 
+// ✅ Palīgfunkcija token list redzamībai
+function showTokenList() {
+  if (UI.tokenListContainer) {
+    UI.tokenListContainer.classList.remove('token-list-hidden');
+    UI.tokenListContainer.classList.add('token-list-visible');
+  }
+}
+
+function hideTokenList() {
+  if (UI.tokenListContainer) {
+    UI.tokenListContainer.classList.add('token-list-hidden');
+    UI.tokenListContainer.classList.remove('token-list-visible');
+  }
+}
+
 export function cleanupRecording(app, previousShowInfo, originalParticles = null) {
   if (originalParticles) app.particles = originalParticles;
   app.showInfo = previousShowInfo;
-  if (app.showInfo && UI.tokenListContainer) UI.tokenListContainer.style.display = 'block';
+  if (app.showInfo) {
+    showTokenList();
+  }
   updateTokenListUI(app.tokens);
   setButtonLoading(UI.recordBtn, false);
   UI.renderBtn.disabled = false;
@@ -40,7 +57,7 @@ export async function startRecording(app) {
   
   const previousShowInfo = app.showInfo;
   app.showInfo = false;
-  if (UI.tokenListContainer) UI.tokenListContainer.style.display = 'none';
+  hideTokenList();
   
   // Saglabājam oriģinālās daļiņas, bet NEIEROBEŽOJAM to skaitu
   const originalParticles = app.particles;
@@ -118,7 +135,8 @@ export async function startRecording(app) {
     const blob = new Blob(chunks, { type: chunks.length ? chunks[0].type : 'video/webm' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.style.display = 'none';
+    // ✅ Izmanto klasi, nevis inline stilu
+    a.classList.add('download-link-hidden');
     a.href = url;
     const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
     a.download = `visualization_${Date.now()}.${ext}`;
@@ -131,7 +149,9 @@ export async function startRecording(app) {
     
     app.particles = originalParticles;
     app.showInfo = previousShowInfo;
-    if (app.showInfo && UI.tokenListContainer) UI.tokenListContainer.style.display = 'block';
+    if (app.showInfo) {
+      showTokenList();
+    }
     updateTokenListUI(app.tokens);
     showToast('Recording finished!', 'success');
     UI.recordTimer.textContent = 'Recording: 0 / 15 s';
