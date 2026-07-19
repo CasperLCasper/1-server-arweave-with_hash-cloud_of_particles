@@ -45,7 +45,6 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     console.log(`🤖 Storage balance: ${ethers.formatEther(storageBalance)} ETH`);
     
     const storageCostBigInt = BigInt(costWei);
-    const storageCostEth = Number(ethers.formatEther(costWei));
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance < storageCostBigInt + gasReserve) {
@@ -53,7 +52,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
       return;
     }
     
-    console.log(`🤖 Buying credits for ${storageCostEth} ETH...`);
+    console.log(`🤖 Buying credits for ${ethers.formatEther(costWei)} ETH...`);
     
     const signer = new EthereumSigner(storageKey);
     const turbo = TurboFactory.authenticated({
@@ -67,7 +66,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     const { winc: before } = await turbo.getBalance();
     
     try {
-      await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
+      await turbo.topUpWithTokens({ tokenAmount: costWei });
     } catch (topUpError) {
       console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
       const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
@@ -83,7 +82,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     const { winc: after } = await turbo.getBalance();
     
     console.log('🤖 ✅ Credits purchased!', { 
-      ethSpent: storageCostEth,
+      ethSpent: ethers.formatEther(costWei),
       added: (after - before).toString() 
     });
   } catch (creditError) {
