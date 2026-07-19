@@ -1,5 +1,5 @@
 // functions/api/topup-credits.js
-import { TurboFactory, EthereumSigner, ETHToTokenAmount } from '@ardrive/turbo-sdk';
+import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import { ethers } from 'ethers';
 
 export async function onRequestGet(context) {
@@ -21,8 +21,8 @@ export async function onRequestGet(context) {
     console.log('💰 ETH bilance:', ethers.formatEther(ethBalance), 'ETH');
 
     // Fiksēta summa: 0.01 ETH
-    const topUpAmountEth = '0.01';
-    const topUpAmountWei = ethers.parseEther(topUpAmountEth);
+    const topUpAmountEth = 0.01; // ✅ Number, nevis string
+    const topUpAmountWei = ethers.parseEther(String(topUpAmountEth));
 
     if (ethBalance < topUpAmountWei) {
       return new Response(JSON.stringify({ 
@@ -39,14 +39,14 @@ export async function onRequestGet(context) {
       signer,
       token: 'base-eth',
       gatewayUrl: 'https://sepolia.base.org',
-      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
-      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
+      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
+      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
     });
 
     const { winc: balanceBefore } = await turbo.getBalance();
     console.log('📊 Kredīti pirms:', balanceBefore.toString(), 'Winston Credits');
 
-    const result = await turbo.topUpWithTokens({ tokenAmount: topUpAmountWei });
+    await turbo.topUpWithTokens({ tokenAmount: topUpAmountEth }); // ✅ Number ETH
     const { winc: balanceAfter } = await turbo.getBalance();
     console.log('📊 Kredīti pēc:', balanceAfter.toString(), 'Winston Credits');
 
@@ -64,7 +64,11 @@ export async function onRequestGet(context) {
 
   } catch (error) {
     console.error('💥 Topup error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('💥 Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    }), {
       status: 500, headers: { "Content-Type": "application/json" }
     });
   }
