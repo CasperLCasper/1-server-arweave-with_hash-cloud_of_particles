@@ -38,21 +38,31 @@ async function executeRobotFinalize(robotSigner, contractAddress, { wallet, full
 
 async function purchaseStorageCredits(provider, storageKey, costWei) {
   if (!storageKey || !costWei) return;
+  
+  const divider = '═'.repeat(50);
+  
   try {
+    console.log(`\n${divider}`);
+    console.log('💳 KREDĪTU PIRKŠANA');
+    console.log(divider);
+    
     const storageWallet = new ethers.Wallet(storageKey, provider);
     const storageAddress = await storageWallet.getAddress();
     const storageBalance = await provider.getBalance(storageAddress);
-    console.log(`🤖 Storage balance: ${ethers.formatEther(storageBalance)} ETH`);
+    console.log(`🏦 Storage maks: ${storageAddress}`);
+    console.log(`💰 ETH balance: ${ethers.formatEther(storageBalance)} ETH`);
     
     const storageCostBigInt = BigInt(costWei);
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance < storageCostBigInt + gasReserve) {
-      console.log('🤖 Not enough funds for credits.');
+      console.log('❌ Nepietiekami līdzekļu kredītu pirkšanai');
+      console.log(divider);
       return;
     }
     
-    console.log(`🤖 Buying credits for ${ethers.formatEther(costWei)} ETH (${costWei} wei)...`);
+    const costEth = ethers.formatEther(costWei);
+    console.log(`🛒 Pērkam kredītus par ${costEth} ETH (${costWei} wei)...`);
     
     const signer = new EthereumSigner(storageKey);
     const turbo = TurboFactory.authenticated({
@@ -64,53 +74,57 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     });
     
     const { winc: before } = await turbo.getBalance();
-    console.log('📊 Credits before:', before.toString());
+    console.log(`📊 Kredīti pirms: ${before.toString()}`);
     
     try {
-      console.log('🔄 Trying topUpWithTokens with wei:', costWei);
       const topUpResult = await turbo.topUpWithTokens({ tokenAmount: costWei });
-      console.log('✅ topUpWithTokens success:', JSON.stringify(topUpResult));
+      console.log(`✅ Transakcija izveidota!`);
+      console.log(`   TX ID: ${topUpResult.id}`);
+      console.log(`   Statuss: ${topUpResult.status}`);
+      console.log(`   Summa: ${topUpResult.quantity} wei`);
+      
+      if (topUpResult.status === 'pending') {
+        console.log(`⏳ Gaidam apstiprinājumu...`);
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        const { winc: after } = await turbo.getBalance();
+        const added = after - before;
+        
+        if (added > 0n) {
+          console.log(`✅ Kredīti pievienoti! +${added.toString()}`);
+          console.log(`📊 Kredīti pēc: ${after.toString()}`);
+        } else {
+          console.log(`⏳ Transakcija vēl nav apstiprināta (jāpagaida ilgāk)`);
+          console.log(`📊 Kredīti pēc: ${after.toString()}`);
+        }
+      }
     } catch (topUpError) {
-      console.warn('⚠️ topUpWithTokens failed:', topUpError.message);
+      console.warn('⚠️ topUpWithTokens neizdevās:', topUpError.message);
       
       const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
       if (txIdMatch) {
         const txId = txIdMatch[0];
-        console.log(`🔄 Trying submitFundTransaction with txId: ${txId}`);
+        console.log(`🔄 Mēģinam submitFundTransaction: ${txId}`);
         
         try {
-          const submitResult = await turbo.submitFundTransaction({ txId: txId });
-          console.log('✅ submitFundTransaction success:', JSON.stringify(submitResult));
+          await turbo.submitFundTransaction({ txId: txId });
+          console.log(`✅ submitFundTransaction veiksmīgs!`);
+          console.log(`⏳ Gaidam apstiprinājumu...`);
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          
+          const { winc: after } = await turbo.getBalance();
+          const added = after - before;
+          console.log(`📊 Kredīti pēc: ${after.toString()}`);
+          console.log(`📊 Pievienoti: ${added.toString()}`);
         } catch (submitError) {
-          console.error('❌ submitFundTransaction failed:', submitError.message);
-          console.error('❌ Full submit error:', JSON.stringify(submitError, Object.getOwnPropertyNames(submitError)));
-          throw submitError;
+          console.error('❌ submitFundTransaction neizdevās:', submitError.message);
         }
-      } else {
-        console.error('❌ No transaction ID in error message');
-        console.error('❌ Full topUp error:', JSON.stringify(topUpError, Object.getOwnPropertyNames(topUpError)));
-        throw topUpError;
       }
     }
     
-    const { winc: after } = await turbo.getBalance();
-    console.log('📊 Credits after:', after.toString());
-    console.log('📊 Difference:', (after - before).toString());
-    
-    if (after > before) {
-      console.log('🤖 ✅ Credits purchased!', { 
-        ethSpent: ethers.formatEther(costWei),
-        added: (after - before).toString() 
-      });
-    } else {
-      console.warn('⚠️ Credits did not increase!', {
-        before: before.toString(),
-        after: after.toString(),
-        diff: (after - before).toString()
-      });
-    }
+    console.log(divider + '\n');
   } catch (creditError) {
-    console.warn('⚠️ Credit purchase failed:', creditError.message);
+    console.warn('⚠️ Kredītu pirkšanas kļūda:', creditError.message);
   }
 }
 
