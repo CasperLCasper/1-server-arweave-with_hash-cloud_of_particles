@@ -50,27 +50,30 @@ export async function onRequestPost(context) {
     
     console.log(`🤖 Webhook robot: storage balance: ${ethers.formatEther(storageBalance)} ETH`);
 
+    // ✅ PĀRVEIDO wei uz ETH skaitli priekš topUpWithTokens
+    const storageCostEth = ethers.formatEther(storageCostWei);
     const storageCostBigInt = BigInt(storageCostWei);
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance >= storageCostBigInt + gasReserve) {
-      console.log(`🤖 Webhook robot: buying credits for ${ethers.formatEther(storageCostWei)} ETH...`);
+      console.log(`🤖 Webhook robot: buying credits for ${storageCostEth} ETH...`);
       
       const signer = new EthereumSigner(ARWEAVE_STORAGE_KEY);
       const turbo = TurboFactory.authenticated({
         signer,
         token: 'base-eth',
         gatewayUrl: 'https://sepolia.base.org',
-        paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
-        uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
+        paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
+        uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
       });
 
       const { winc: before } = await turbo.getBalance();
-      await turbo.topUpWithTokens({ tokenAmount: storageCostWei });
+      // ✅ Izmanto storageCostEth (ETH kā string), nevis storageCostWei (wei)
+      await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
       const { winc: after } = await turbo.getBalance();
       
       console.log('🤖 Webhook robot: ✅ Credits purchased!', {
-        ethSpent: ethers.formatEther(storageCostWei),
+        ethSpent: storageCostEth,
         gasReserveLeft: ethers.formatEther(gasReserve),
         creditsBefore: before.toString(),
         creditsAfter: after.toString(),
