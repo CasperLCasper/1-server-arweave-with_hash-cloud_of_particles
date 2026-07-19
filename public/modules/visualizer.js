@@ -347,7 +347,13 @@ export async function renderSnapshot(app, chain) {
     
     running = false;
     UI.progressBar.style.transform = 'scaleX(1)';
-    showToast(`Ready! ${app.tokens.length} assets found on ${chain} (${app.nftCenters.length} NFTs)`, 'success');
+    
+    // ✅ LABOTĀ RINDIŅA - pareizais formāts:
+    const chainConfig = VIZ_CHAINS[chain];
+    const chainName = chainConfig ? chainConfig.name : chain;
+    const tokenCount = app.tokens.filter(t => !t.isNFT).length;
+    showToast(`✅ Connected to ${chainName}! Loaded ${app.tokens.length} assets (${tokenCount} tokens, ${app.nftCenters.length} NFTs)`, 'success');
+    
     hideProgress();
     animate(app);
   } catch (e) {
