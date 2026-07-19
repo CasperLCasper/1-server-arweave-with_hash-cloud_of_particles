@@ -74,7 +74,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
       if (txIdMatch) {
         const txId = txIdMatch[0];
         console.log(`🤖 Submitting fund transaction: ${txId}`);
-        await turbo.submitFundTransaction(txId);
+        await turbo.submitFundTransaction({ txId: txId });
       } else {
         throw topUpError;
       }
