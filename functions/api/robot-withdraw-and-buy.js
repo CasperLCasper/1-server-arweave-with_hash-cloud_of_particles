@@ -67,7 +67,21 @@ export async function onRequestPost(context) {
       });
 
       const { winc: before } = await turbo.getBalance();
-      await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
+      
+      try {
+        await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
+      } catch (topUpError) {
+        console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
+        const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
+        if (txIdMatch) {
+          const txId = txIdMatch[0];
+          console.log(`🤖 Submitting fund transaction: ${txId}`);
+          await turbo.submitFundTransaction(txId);
+        } else {
+          throw topUpError;
+        }
+      }
+      
       const { winc: after } = await turbo.getBalance();
       
       console.log('🤖 Webhook robot: ✅ Credits purchased!', {
