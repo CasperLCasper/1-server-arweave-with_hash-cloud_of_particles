@@ -39,8 +39,8 @@ export async function onRequestGet(context) {
       signer,
       token: 'base-eth',
       gatewayUrl: 'https://sepolia.base.org',
-      paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
-      uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
+      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
+      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
     });
 
     const { winc: balanceBefore } = await turbo.getBalance();
