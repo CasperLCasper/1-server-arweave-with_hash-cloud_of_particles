@@ -457,12 +457,19 @@ const App = Object.assign({}, AppState, {
         `\n${arweaveStatus} Arweave: ${arweaveSuccess ? 'OK' : 'Failed (files saved locally)'}` +
         `\n\n💾 All files saved as nft_assets_*.zip`);
       
+      // ✅ LABOTIE RINDIŅAS - veiksmīgs gadījums
       showToast('🔄 Refreshing view...', 'info');
       await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
       await new Promise(resolve => setTimeout(resolve, 500));
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.signer = await this.provider.getSigner();
       this.account = await this.signer.getAddress();
+      
+      if (UI.accountDisplay) {
+        UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+      }
+      await updateChainStatus();
+      
       await this.renderSnapshot(this.currentVizChain);
       
     } catch (error) {
@@ -481,12 +488,19 @@ const App = Object.assign({}, AppState, {
       showWarning('', false);
       alert(userMessage);
       
+      // ✅ LABOTIE RINDIŅAS - kļūdas gadījums
       try {
         await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
         await new Promise(resolve => setTimeout(resolve, 500));
         this.provider = new ethers.BrowserProvider(window.ethereum);
         this.signer = await this.provider.getSigner();
         this.account = await this.signer.getAddress();
+        
+        if (UI.accountDisplay) {
+          UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+        }
+        await updateChainStatus();
+        
         await this.renderSnapshot(this.currentVizChain);
       } catch (restoreErr) {
         console.warn('Could not restore visualization:', restoreErr);
