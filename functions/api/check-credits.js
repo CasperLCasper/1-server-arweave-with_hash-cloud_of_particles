@@ -1,3 +1,4 @@
+// functions/api/check-credits.js
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import { ethers } from 'ethers';
 
@@ -14,19 +15,17 @@ export async function onRequestGet(context) {
 
     const signer = new EthereumSigner(privateKey);
     
-    // Konfigurējam Turbo ar pareiziem URL priekš Testnet
+    // Konfigurējam Turbo ar jaunajiem testnet URL
     const turbo = TurboFactory.authenticated({
       signer,
       token: 'base-eth',
-      // SALABOTS: gatewayUrl ir Arweave vārteja, nevis Base RPC!
-      gatewayUrl: 'https://arweave.net', 
-      paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
-      uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
+      gatewayUrl: 'https://sepolia.base.org',
+      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
+      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
     });
 
     // Iegūstam bilanci drošā veidā
     const balance = await turbo.getBalance();
-    // Ja balance atgriež winston vai winc, nodrošināmies pret abu variantu eksistenci
     const creditsRaw = balance.winston || balance.winc || "0";
     const creditsBigInt = BigInt(creditsRaw);
     
