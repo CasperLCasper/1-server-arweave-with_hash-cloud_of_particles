@@ -85,7 +85,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
       
       if (topUpResult.status === 'pending') {
         console.log(`⏳ Gaidam apstiprinājumu...`);
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 30000));
         
         const { winc: after } = await turbo.getBalance();
         const added = after - before;
