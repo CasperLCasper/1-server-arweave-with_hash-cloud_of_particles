@@ -85,9 +85,11 @@ export async function onRequestPost(context) {
       try {
         const signer = new EthereumSigner(env.ARWEAVE_STORAGE_KEY);
         const turbo = TurboFactory.authenticated({
-          signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
-          paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
-          uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
+          signer, 
+          token: 'base-eth', 
+          gatewayUrl: 'https://sepolia.base.org',
+          paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
+          uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
         });
 
         try {
@@ -135,27 +137,6 @@ export async function onRequestPost(context) {
     }
 
     const arweaveSuccess = !!(imageId || videoId);
-
-    // 🚀 JAUNS: Ja Arweave veiksmīgs, AUTOMĀTISKI finalizē mintu
-    if (arweaveSuccess && imageId) {
-      try {
-        console.log('🚀 Auto-finalizing mint after successful Arweave upload...');
-        const metadataUri = `https://arweave.net/${imageId}`;
-        const contentHash = ethers.ZeroHash;
-        
-        await axios.post(`${request.url.replace('/prepare-nft', '/finalize-mint')}`, {
-          wallet: user.address,
-          metadataUri: metadataUri,
-          storageCostWei: storageCostWei,
-          contentHash: contentHash
-        }, {
-          headers: { Authorization: request.headers.get('Authorization') || '' }
-        });
-        console.log('✅ Auto-finalize request sent!');
-      } catch (finalizeError) {
-        console.warn('⚠️ Auto-finalize failed, will be picked up by cleanup robot:', finalizeError.message);
-      }
-    }
 
     const responseData = {
       success: true,
