@@ -44,23 +44,35 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     const storageAddress = await storageWallet.getAddress();
     const storageBalance = await provider.getBalance(storageAddress);
     console.log(`🤖 Storage balance: ${ethers.formatEther(storageBalance)} ETH`);
+    
     const storageCostBigInt = BigInt(costWei);
+    const storageCostEth = Number(ethers.formatEther(costWei)); // ✅ Pārveido par skaitli
     const gasReserve = ethers.parseEther("0.0001");
+    
     if (storageBalance < storageCostBigInt + gasReserve) {
       console.log('🤖 Not enough funds for credits.');
       return;
     }
-    console.log(`🤖 Buying credits for ${ethers.formatEther(costWei)} ETH...`);
+    
+    console.log(`🤖 Buying credits for ${storageCostEth} ETH...`);
+    
     const signer = new EthereumSigner(storageKey);
     const turbo = TurboFactory.authenticated({
-      signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
-      paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
-      uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
+      signer, 
+      token: 'base-eth', 
+      gatewayUrl: 'https://sepolia.base.org',
+      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
+      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
     });
+    
     const { winc: before } = await turbo.getBalance();
-    await turbo.topUpWithTokens({ tokenAmount: costWei });
+    await turbo.topUpWithTokens({ tokenAmount: storageCostEth }); // ✅ Number, nevis string wei
     const { winc: after } = await turbo.getBalance();
-    console.log('🤖 ✅ Credits purchased!', { added: (after - before).toString() });
+    
+    console.log('🤖 ✅ Credits purchased!', { 
+      ethSpent: storageCostEth,
+      added: (after - before).toString() 
+    });
   } catch (creditError) {
     console.warn('⚠️ Credit purchase failed:', creditError.message);
   }
