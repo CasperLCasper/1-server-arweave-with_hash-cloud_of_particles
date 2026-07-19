@@ -50,12 +50,11 @@ export async function onRequestPost(context) {
     
     console.log(`🤖 Webhook robot: storage balance: ${ethers.formatEther(storageBalance)} ETH`);
 
-    const storageCostEth = Number(ethers.formatEther(storageCostWei));
     const storageCostBigInt = BigInt(storageCostWei);
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance >= storageCostBigInt + gasReserve) {
-      console.log(`🤖 Webhook robot: buying credits for ${storageCostEth} ETH...`);
+      console.log(`🤖 Webhook robot: buying credits for ${ethers.formatEther(storageCostWei)} ETH...`);
       
       const signer = new EthereumSigner(ARWEAVE_STORAGE_KEY);
       const turbo = TurboFactory.authenticated({
@@ -69,7 +68,7 @@ export async function onRequestPost(context) {
       const { winc: before } = await turbo.getBalance();
       
       try {
-        await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
+        await turbo.topUpWithTokens({ tokenAmount: storageCostWei });
       } catch (topUpError) {
         console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
         const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
@@ -85,7 +84,7 @@ export async function onRequestPost(context) {
       const { winc: after } = await turbo.getBalance();
       
       console.log('🤖 Webhook robot: ✅ Credits purchased!', {
-        ethSpent: storageCostEth,
+        ethSpent: ethers.formatEther(storageCostWei),
         gasReserveLeft: ethers.formatEther(gasReserve),
         creditsBefore: before.toString(),
         creditsAfter: after.toString(),
