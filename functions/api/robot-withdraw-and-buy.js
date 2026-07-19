@@ -50,8 +50,7 @@ export async function onRequestPost(context) {
     
     console.log(`🤖 Webhook robot: storage balance: ${ethers.formatEther(storageBalance)} ETH`);
 
-    // ✅ PĀRVEIDO wei uz ETH skaitli priekš topUpWithTokens
-    const storageCostEth = ethers.formatEther(storageCostWei);
+    const storageCostEth = Number(ethers.formatEther(storageCostWei));
     const storageCostBigInt = BigInt(storageCostWei);
     const gasReserve = ethers.parseEther("0.0001");
     
@@ -68,7 +67,6 @@ export async function onRequestPost(context) {
       });
 
       const { winc: before } = await turbo.getBalance();
-      // ✅ Izmanto storageCostEth (ETH kā string), nevis storageCostWei (wei)
       await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
       const { winc: after } = await turbo.getBalance();
       
