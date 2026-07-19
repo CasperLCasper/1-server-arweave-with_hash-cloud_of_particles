@@ -22,7 +22,6 @@ function parseMetadataUri(uri) {
   return trimmed;
 }
 
-// 🚀 Tagad pieņem robotSigner, nevis provider+privateKey
 async function executeRobotFinalize(robotSigner, contractAddress, { wallet, fullMetadataUri, storageCostWei, finalContentHash }) {
   const robotAddress = await robotSigner.getAddress();
   const contractWithSigner = new ethers.Contract(contractAddress, WALLET_NFT_ABI, robotSigner);
@@ -46,7 +45,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     console.log(`🤖 Storage balance: ${ethers.formatEther(storageBalance)} ETH`);
     
     const storageCostBigInt = BigInt(costWei);
-    const storageCostEth = Number(ethers.formatEther(costWei)); // ✅ Pārveido par skaitli
+    const storageCostEth = Number(ethers.formatEther(costWei));
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance < storageCostBigInt + gasReserve) {
@@ -61,12 +60,26 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
       signer, 
       token: 'base-eth', 
       gatewayUrl: 'https://sepolia.base.org',
-      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },  // ✅ IZMAINĪTS
-      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }     // ✅ IZMAINĪTS
+      paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
+      uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
     });
     
     const { winc: before } = await turbo.getBalance();
-    await turbo.topUpWithTokens({ tokenAmount: storageCostEth }); // ✅ Number, nevis string wei
+    
+    try {
+      await turbo.topUpWithTokens({ tokenAmount: storageCostEth });
+    } catch (topUpError) {
+      console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
+      const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
+      if (txIdMatch) {
+        const txId = txIdMatch[0];
+        console.log(`🤖 Submitting fund transaction: ${txId}`);
+        await turbo.submitFundTransaction(txId);
+      } else {
+        throw topUpError;
+      }
+    }
+    
     const { winc: after } = await turbo.getBalance();
     
     console.log('🤖 ✅ Credits purchased!', { 
@@ -134,7 +147,6 @@ export async function onRequestPost(context) {
     console.log('🔍 FINALIZE MINT DEBUG:', { wallet, metadataUri: fullMetadataUri, storageCostEth: ethers.formatEther(storageCostWei || "0"), contentHash: finalContentHash, deposit: ethers.formatEther(pendingMint.deposit) });
 
     try {
-      // 🚀 Izmanto vienoto NonceManager
       const robotSigner = getRobotSigner(env, provider);
       await executeRobotFinalize(robotSigner, CONTRACT_ADDRESS, { wallet, fullMetadataUri, storageCostWei, finalContentHash });
       clearPendingTrack(wallet);
