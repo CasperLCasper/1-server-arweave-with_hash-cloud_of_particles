@@ -52,7 +52,7 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
       return;
     }
     
-    console.log(`🤖 Buying credits for ${ethers.formatEther(costWei)} ETH...`);
+    console.log(`🤖 Buying credits for ${ethers.formatEther(costWei)} ETH (${costWei} wei)...`);
     
     const signer = new EthereumSigner(storageKey);
     const turbo = TurboFactory.authenticated({
@@ -64,27 +64,51 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
     });
     
     const { winc: before } = await turbo.getBalance();
+    console.log('📊 Credits before:', before.toString());
     
     try {
-      await turbo.topUpWithTokens({ tokenAmount: costWei });
+      console.log('🔄 Trying topUpWithTokens with wei:', costWei);
+      const topUpResult = await turbo.topUpWithTokens({ tokenAmount: costWei });
+      console.log('✅ topUpWithTokens success:', JSON.stringify(topUpResult));
     } catch (topUpError) {
-      console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
+      console.warn('⚠️ topUpWithTokens failed:', topUpError.message);
+      
       const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
       if (txIdMatch) {
         const txId = txIdMatch[0];
-        console.log(`🤖 Submitting fund transaction: ${txId}`);
-        await turbo.submitFundTransaction({ txId: txId });
+        console.log(`🔄 Trying submitFundTransaction with txId: ${txId}`);
+        
+        try {
+          const submitResult = await turbo.submitFundTransaction({ txId: txId });
+          console.log('✅ submitFundTransaction success:', JSON.stringify(submitResult));
+        } catch (submitError) {
+          console.error('❌ submitFundTransaction failed:', submitError.message);
+          console.error('❌ Full submit error:', JSON.stringify(submitError, Object.getOwnPropertyNames(submitError)));
+          throw submitError;
+        }
       } else {
+        console.error('❌ No transaction ID in error message');
+        console.error('❌ Full topUp error:', JSON.stringify(topUpError, Object.getOwnPropertyNames(topUpError)));
         throw topUpError;
       }
     }
     
     const { winc: after } = await turbo.getBalance();
+    console.log('📊 Credits after:', after.toString());
+    console.log('📊 Difference:', (after - before).toString());
     
-    console.log('🤖 ✅ Credits purchased!', { 
-      ethSpent: ethers.formatEther(costWei),
-      added: (after - before).toString() 
-    });
+    if (after > before) {
+      console.log('🤖 ✅ Credits purchased!', { 
+        ethSpent: ethers.formatEther(costWei),
+        added: (after - before).toString() 
+      });
+    } else {
+      console.warn('⚠️ Credits did not increase!', {
+        before: before.toString(),
+        after: after.toString(),
+        diff: (after - before).toString()
+      });
+    }
   } catch (creditError) {
     console.warn('⚠️ Credit purchase failed:', creditError.message);
   }
