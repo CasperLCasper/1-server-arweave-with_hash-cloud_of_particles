@@ -242,6 +242,7 @@ const App = Object.assign({}, AppState, {
         ])
       );
       
+      // ✅ 1. Pārslēdzamies uz Base ķēdi
       showToast('🔄 Switching to Base...', 'info');
       await switchToMintChain();
       
@@ -250,6 +251,11 @@ const App = Object.assign({}, AppState, {
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.signer = await this.provider.getSigner();
       this.account = await this.signer.getAddress();
+      
+      // ✅ Atjauno adresi pēc ķēdes maiņas
+      if (UI.accountDisplay) {
+        UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+      }
       
       const loginSuccess = await login(this.signer, this.account);
       if (!loginSuccess) {
@@ -457,7 +463,7 @@ const App = Object.assign({}, AppState, {
         `\n${arweaveStatus} Arweave: ${arweaveSuccess ? 'OK' : 'Failed (files saved locally)'}` +
         `\n\n💾 All files saved as nft_assets_*.zip`);
       
-      // ✅ LABOTIE RINDIŅAS - veiksmīgs gadījums
+      // ✅ 2. Veiksmīgs gadījums - atjauno vizualizācijas ķēdi
       showToast('🔄 Refreshing view...', 'info');
       await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -488,7 +494,7 @@ const App = Object.assign({}, AppState, {
       showWarning('', false);
       alert(userMessage);
       
-      // ✅ LABOTIE RINDIŅAS - kļūdas gadījums
+      // ✅ 3. Kļūdas gadījums - atjauno vizualizācijas ķēdi
       try {
         await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
         await new Promise(resolve => setTimeout(resolve, 500));
