@@ -8,6 +8,9 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   try {
+    // 🧪 TESTS - simulē metadata kļūdu (IZDZĒST PĒC TESTA!)
+    throw new Error("Simulated metadata upload failure");
+    
     // 1. Autentifikācijas pārbaude
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
@@ -94,10 +97,10 @@ export async function onRequestPost(context) {
       token: 'base-eth',
       gatewayUrl: 'https://sepolia.base.org',
       paymentServiceConfig: {
-        url: 'https://payment.services.ar-io.dev',  // ✅ IZMAINĪTS
+        url: 'https://payment.services.ar-io.dev',
       },
       uploadServiceConfig: {
-        url: 'https://upload.services.ar-io.dev',   // ✅ IZMAINĪTS
+        url: 'https://upload.services.ar-io.dev',
       }
     });
 
