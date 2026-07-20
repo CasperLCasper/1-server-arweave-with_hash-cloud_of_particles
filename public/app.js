@@ -116,6 +116,26 @@ const App = Object.assign({}, AppState, {
     showToast('⏰ Session expired. Please click "Connect Wallet" to reconnect.', 'warning');
   },
 
+  async cancelMintAndRefund() {
+    try {
+      showToast('🔄 Returning your deposit...', 'info');
+      const cancelRes = await apiFetch('/api/cancel-mint', {
+        method: 'POST',
+        body: JSON.stringify({ wallet: this.account })
+      });
+      const cancelData = await cancelRes.json();
+      if (cancelData.success) {
+        showToast('✅ Deposit returned to your wallet!', 'success');
+        console.log('💰 Refund:', cancelData.refundEth, 'ETH');
+      } else {
+        throw new Error(cancelData.error || 'Cancel failed');
+      }
+    } catch (cancelError) {
+      console.error('Cancel mint failed:', cancelError);
+      showToast('⚠️ Automatic refund failed. Please contact support.', 'warning');
+    }
+  },
+
   async generateNFT() {
     if (MAINTENANCE_CONFIG.isMaintenance) {
       showToast('🛠️ Minting is disabled during maintenance.', 'warning');
@@ -354,6 +374,10 @@ const App = Object.assign({}, AppState, {
       } catch (uploadError) {
         console.error('Upload error:', uploadError);
         showToast('❌ ' + uploadError.message, 'error');
+        
+        // ✅ ATM AKSA - prepare-nft neizdevās
+        await this.cancelMintAndRefund();
+        
         showWarning('', false);
         setButtonLoading(UI.generateNFTBtn, false);
         return;
@@ -406,7 +430,11 @@ const App = Object.assign({}, AppState, {
         showToast('✅ Metadata uploaded to Arweave!', 'success');
       } catch (metaError) {
         console.error('Metadata upload failed:', metaError);
-        showToast('❌ Failed to upload metadata. Deposit will be refunded automatically.', 'error');
+        showToast('❌ Failed to upload metadata. Returning deposit...', 'error');
+        
+        // ✅ ATM AKSA - metadata neizdevās
+        await this.cancelMintAndRefund();
+        
         showWarning('', false);
         setButtonLoading(UI.generateNFTBtn, false);
         return;
@@ -431,7 +459,10 @@ const App = Object.assign({}, AppState, {
         showToast('✅ NFT finalized on blockchain!', 'success');
       } catch (finalizeError) {
         console.error('Finalize failed:', finalizeError);
-        showToast('❌ Finalize failed. Refund will be processed automatically.', 'error');
+        showToast('❌ Finalize failed. Returning deposit...', 'error');
+        
+        // ✅ ATM AKSA - finalize neizdevās
+        await this.cancelMintAndRefund();
       }
       
       const metadataBlob = new Blob([localMetadataString], { type: 'application/json' });
