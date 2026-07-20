@@ -116,6 +116,39 @@ const App = Object.assign({}, AppState, {
     showToast('⏰ Session expired. Please click "Connect Wallet" to reconnect.', 'warning');
   },
 
+  // ✅ JAUNĀ FUNKCIJA - Atmaksa ar retry
+  async cancelMintAndRefund() {
+    try {
+      showToast('🔄 Returning your deposit...', 'info');
+      
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        const cancelRes = await apiFetch('/api/cancel-mint', {
+          method: 'POST',
+          body: JSON.stringify({ wallet: this.account })
+        });
+        const cancelData = await cancelRes.json();
+        
+        if (cancelData.success) {
+          showToast('✅ Deposit returned to your wallet!', 'success');
+          console.log('💰 Refund:', cancelData.refundEth, 'ETH');
+          return;
+        }
+        
+        if (cancelData.error?.includes('No pending mint found')) {
+          console.log(`⏳ Mint not found, retrying (${attempt}/5)...`);
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          throw new Error(cancelData.error || 'Cancel failed');
+        }
+      }
+      
+      throw new Error('Max retries reached');
+    } catch (cancelError) {
+      console.error('Cancel mint failed:', cancelError);
+      showToast('⚠️ Automatic refund failed. Please contact support.', 'warning');
+    }
+  },
+
   async generateNFT() {
     if (MAINTENANCE_CONFIG.isMaintenance) {
       showToast('🛠️ Minting is disabled during maintenance.', 'warning');
@@ -348,6 +381,7 @@ const App = Object.assign({}, AppState, {
       } catch (uploadError) {
         console.error('Upload error:', uploadError);
         showToast('❌ ' + uploadError.message, 'error');
+        await this.cancelMintAndRefund(); // ✅ ATM AKSA
         showWarning('', false);
         setButtonLoading(UI.generateNFTBtn, false);
         return;
@@ -400,7 +434,8 @@ const App = Object.assign({}, AppState, {
         showToast('✅ Metadata uploaded to Arweave!', 'success');
       } catch (metaError) {
         console.error('Metadata upload failed:', metaError);
-        showToast('❌ Failed to upload metadata. Deposit will be refunded automatically.', 'error');
+        showToast('❌ Failed to upload metadata. Returning deposit...', 'error');
+        await this.cancelMintAndRefund(); // ✅ ATM AKSA
         showWarning('', false);
         setButtonLoading(UI.generateNFTBtn, false);
         return;
@@ -426,6 +461,7 @@ const App = Object.assign({}, AppState, {
       } catch (finalizeError) {
         console.error('Finalize failed:', finalizeError);
         showToast('❌ Finalize failed. Refund will be processed automatically.', 'error');
+        await this.cancelMintAndRefund(); // ✅ ATM AKSA
       }
       
       const metadataBlob = new Blob([localMetadataString], { type: 'application/json' });
