@@ -137,14 +137,19 @@ export async function onRequestPost(context) {
                 { name: "User-Address", value: user.address.toLowerCase() }, { name: "File-Hash", value: videoHash }, { name: "NFT-Asset-Type", value: "video" }
               ]}
             });
-            videoId = videoResult?.id;
-            if (videoId) { 
-              console.log('✅ Video uploaded to Arweave:', videoId); 
-              totalBytesUploaded += videoSize; 
-            } else { 
-              console.warn('⚠️ Turbo SDK did not return TX ID for video'); 
-              videoError = 'No TX ID returned for video'; 
-            }
+            
+            // 🧪 TESTS: Simulē video kļūdu
+            throw new Error("Simulated video upload failure");
+            
+            // ✅ Oriģinālais kods (atkomentēt pēc testa):
+            // videoId = videoResult?.id;
+            // if (videoId) { 
+            //   console.log('✅ Video uploaded to Arweave:', videoId); 
+            //   totalBytesUploaded += videoSize; 
+            // } else { 
+            //   console.warn('⚠️ Turbo SDK did not return TX ID for video'); 
+            //   videoError = 'No TX ID returned for video'; 
+            // }
           } catch (err) { 
             console.warn('⚠️ Arweave video upload error:', err.message); 
             videoError = err.message; 
