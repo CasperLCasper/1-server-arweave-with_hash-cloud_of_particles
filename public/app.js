@@ -116,7 +116,7 @@ const App = Object.assign({}, AppState, {
     showToast('⏰ Session expired. Please click "Connect Wallet" to reconnect.', 'warning');
   },
 
-  // ✅ JAUNĀ FUNKCIJA - Atmaksa ar retry
+  // ✅ ATM AKSAS FUNKCIJA ar retry
   async cancelMintAndRefund() {
     try {
       showToast('🔄 Returning your deposit...', 'info');
@@ -275,6 +275,7 @@ const App = Object.assign({}, AppState, {
         ])
       );
       
+      // ✅ 1. Pārslēdzamies uz Base ķēdi
       showToast('🔄 Switching to Base...', 'info');
       await switchToMintChain();
       
@@ -283,6 +284,11 @@ const App = Object.assign({}, AppState, {
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.signer = await this.provider.getSigner();
       this.account = await this.signer.getAddress();
+      
+      // ✅ Atjauno adresi pēc ķēdes maiņas
+      if (UI.accountDisplay) {
+        UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+      }
       
       const loginSuccess = await login(this.signer, this.account);
       if (!loginSuccess) {
@@ -493,12 +499,20 @@ const App = Object.assign({}, AppState, {
         `\n${arweaveStatus} Arweave: ${arweaveSuccess ? 'OK' : 'Failed (files saved locally)'}` +
         `\n\n💾 All files saved as nft_assets_*.zip`);
       
+      // ✅ 2. Veiksmīgs gadījums - ATJAUNO UI
       showToast('🔄 Refreshing view...', 'info');
       await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
       await new Promise(resolve => setTimeout(resolve, 500));
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.signer = await this.provider.getSigner();
       this.account = await this.signer.getAddress();
+      
+      // ✅ ATJAUNO ADRESI UN STATUSU
+      if (UI.accountDisplay) {
+        UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+      }
+      await updateChainStatus();
+      
       await this.renderSnapshot(this.currentVizChain);
       
     } catch (error) {
@@ -517,12 +531,20 @@ const App = Object.assign({}, AppState, {
       showWarning('', false);
       alert(userMessage);
       
+      // ✅ 3. Kļūdas gadījums - ATJAUNO UI
       try {
         await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
         await new Promise(resolve => setTimeout(resolve, 500));
         this.provider = new ethers.BrowserProvider(window.ethereum);
         this.signer = await this.provider.getSigner();
         this.account = await this.signer.getAddress();
+        
+        // ✅ ATJAUNO ADRESI UN STATUSU
+        if (UI.accountDisplay) {
+          UI.accountDisplay.textContent = `Connected account: ${this.account}`;
+        }
+        await updateChainStatus();
+        
         await this.renderSnapshot(this.currentVizChain);
       } catch (restoreErr) {
         console.warn('Could not restore visualization:', restoreErr);
