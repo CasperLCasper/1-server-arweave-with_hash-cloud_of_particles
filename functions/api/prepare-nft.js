@@ -85,14 +85,11 @@ export async function onRequestPost(context) {
       try {
         const signer = new EthereumSigner(env.ARWEAVE_STORAGE_KEY);
         const turbo = TurboFactory.authenticated({
-          signer, 
-          token: 'base-eth', 
-          gatewayUrl: 'https://sepolia.base.org',
-          paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
-          uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
+          signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
+          paymentServiceConfig: { url: 'https://payment.ardrive.dev' },
+          uploadServiceConfig: { url: 'https://upload.ardrive.dev' }
         });
 
-        // ✅ Augšupielādē attēlu
         try {
           console.log('📤 Uploading image to Arweave via Turbo...');
           const imageResult = await turbo.upload({
@@ -103,28 +100,10 @@ export async function onRequestPost(context) {
             ]}
           });
           imageId = imageResult?.id;
-          if (imageId) { 
-            console.log('✅ Image uploaded to Arweave:', imageId); 
-            totalBytesUploaded += imageSize; 
-          } else { 
-            console.warn('⚠️ Turbo SDK did not return TX ID for image'); 
-            arweaveError = 'No TX ID returned for image'; 
-          }
-        } catch (imageError) { 
-          console.warn('⚠️ Arweave image upload error:', imageError.message); 
-          arweaveError = imageError.message; 
-        }
+          if (imageId) { console.log('✅ Image uploaded to Arweave:', imageId); totalBytesUploaded += imageSize; }
+          else { console.warn('⚠️ Turbo SDK did not return TX ID for image'); arweaveError = 'No TX ID returned for image'; }
+        } catch (imageError) { console.warn('⚠️ Arweave image upload error:', imageError.message); arweaveError = imageError.message; }
 
-        // ✅ Ja attēls neizdevās - atgriež kļūdu
-        if (!imageId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: `Image upload failed: ${arweaveError || 'Unknown error'}`,
-            image: { hash: imageHash, id: null, fileName: imageName, mimeType: imageType, size: imageSize }
-          }), { status: 500, headers: { "Content-Type": "application/json" } });
-        }
-
-        // ✅ Augšupielādē video (ja ir)
         if (videoBuffer) {
           try {
             console.log('📤 Uploading video to Arweave via Turbo...');
@@ -136,25 +115,9 @@ export async function onRequestPost(context) {
               ]}
             });
             videoId = videoResult?.id;
-            if (videoId) { 
-              console.log('✅ Video uploaded to Arweave:', videoId); 
-              totalBytesUploaded += videoSize; 
-            } else { 
-              console.warn('⚠️ Turbo SDK did not return TX ID for video'); 
-            }
-          } catch (videoError) { 
-            console.warn('⚠️ Arweave video upload error:', videoError.message); 
-          }
-
-          // ✅ Ja video neizdevās - atgriež kļūdu
-          if (!videoId) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: 'Video upload failed',
-              image: { hash: imageHash, id: imageId, fileName: imageName, mimeType: imageType, size: imageSize },
-              video: { hash: videoHash, id: null, fileName: videoName, mimeType: videoType, size: videoSize }
-            }), { status: 500, headers: { "Content-Type": "application/json" } });
-          }
+            if (videoId) { console.log('✅ Video uploaded to Arweave:', videoId); totalBytesUploaded += videoSize; }
+            else { console.warn('⚠️ Turbo SDK did not return TX ID for video'); }
+          } catch (videoError) { console.warn('⚠️ Arweave video upload error:', videoError.message); }
         }
 
         if (totalBytesUploaded > 0) {
@@ -163,29 +126,42 @@ export async function onRequestPost(context) {
             storageCostEth = tokenPrice.toString();
             storageCostWei = ethers.parseEther(storageCostEth).toString();
             console.log(`💰 Storage cost: ${storageCostEth} ETH (${storageCostWei} wei) for ${totalBytesUploaded} bytes`);
-          } catch (priceError) { 
-            console.warn('⚠️ Could not calculate storage price:', priceError.message); 
-          }
+          } catch (priceError) { console.warn('⚠️ Could not calculate storage price:', priceError.message); }
         }
-      } catch (initError) { 
-        console.warn('⚠️ Turbo initialization error:', initError.message); 
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Turbo initialization failed: ${initError.message}`
-        }), { status: 500, headers: { "Content-Type": "application/json" } });
-      }
+      } catch (initError) { console.warn('⚠️ Turbo initialization error:', initError.message); arweaveError = initError.message; }
     } else {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No ARWEAVE_STORAGE_KEY configured'
-      }), { status: 500, headers: { "Content-Type": "application/json" } });
+      arweaveError = 'No ARWEAVE_STORAGE_KEY configured';
+      console.warn('⚠️ ARWEAVE_STORAGE_KEY not configured - files saved locally only');
+    }
+
+    const arweaveSuccess = !!(imageId || videoId);
+
+    // 🚀 JAUNS: Ja Arweave veiksmīgs, AUTOMĀTISKI finalizē mintu
+    if (arweaveSuccess && imageId) {
+      try {
+        console.log('🚀 Auto-finalizing mint after successful Arweave upload...');
+        const metadataUri = `https://arweave.net/${imageId}`;
+        const contentHash = ethers.ZeroHash;
+        
+        await axios.post(`${request.url.replace('/prepare-nft', '/finalize-mint')}`, {
+          wallet: user.address,
+          metadataUri: metadataUri,
+          storageCostWei: storageCostWei,
+          contentHash: contentHash
+        }, {
+          headers: { Authorization: request.headers.get('Authorization') || '' }
+        });
+        console.log('✅ Auto-finalize request sent!');
+      } catch (finalizeError) {
+        console.warn('⚠️ Auto-finalize failed, will be picked up by cleanup robot:', finalizeError.message);
+      }
     }
 
     const responseData = {
       success: true,
-      image: { hash: imageHash, id: imageId, fileName: imageName, mimeType: imageType, size: imageSize },
-      video: videoBuffer ? { hash: videoHash, id: videoId, fileName: videoName, mimeType: videoType, size: videoSize } : null,
-      arweave: { success: true, error: null },
+      image: { hash: imageHash, id: imageId || null, fileName: imageName, mimeType: imageType, size: imageSize },
+      video: videoBuffer ? { hash: videoHash, id: videoId || null, fileName: videoName, mimeType: videoType, size: videoSize } : null,
+      arweave: { success: arweaveSuccess, error: arweaveError },
       storage: { bytesUploaded: totalBytesUploaded, costWei: storageCostWei, costEth: storageCostEth }
     };
 
