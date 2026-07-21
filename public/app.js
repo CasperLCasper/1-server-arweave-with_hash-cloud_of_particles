@@ -36,7 +36,7 @@ const App = Object.assign({}, AppState, {
   },
 
   resetApp() {
-    console.log("🔄 Resetting app data after network change...");
+    console.log("🔄 Resetting app data...");
     
     stopAnimation(this);
     
@@ -73,9 +73,14 @@ const App = Object.assign({}, AppState, {
       UI.generateNFTBtn.setAttribute('data-price', '');
     }
     
+    if (UI.balanceDisplay) {
+      UI.balanceDisplay.textContent = '';
+      UI.balanceDisplay.className = 'balance-display';
+    }
+    
     updateChainStatus();
     
-    console.log("✅ App data cleared. Auth token preserved.");
+    console.log("✅ App data cleared.");
   },
 
   handleSessionExpired() {
@@ -357,16 +362,14 @@ const App = Object.assign({}, AppState, {
       
       const arweaveSuccess = serverData.arweave?.success || false;
       
-      // ❌ Ja Arweave neizdevās - APSTĀJIES ŠEIT
       if (!arweaveSuccess) {
-        showToast('⚠️ Arweave upload failed. Your deposit has been refunded.', 'warning');
+        showToast('⚠️ Arweave upload failed. Refund will be processed by cleanup robot.', 'warning');
         showWarning('', false);
         setButtonLoading(UI.generateNFTBtn, false);
         this.showInfo = previousShowInfo;
         return;
       }
       
-      // ✅ Arweave veiksmīgs - turpinam ar metadata un finalize
       const gw = ARWEAVE_GATEWAY;
       const imageUrl = serverData.image.id ? `${gw}${serverData.image.id}` : `local://${imageHash}`;
       const storageCostWei = serverData.storage?.costWei || "0";
@@ -574,6 +577,7 @@ const App = Object.assign({}, AppState, {
 
   init() {
     console.log("🚀 Starting Wallet Visualizer with Arweave Permanent Storage...");
+    this.resetApp();
     initUI();
     resizeCanvas(this);
     
