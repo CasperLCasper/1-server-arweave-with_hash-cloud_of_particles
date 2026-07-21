@@ -146,8 +146,10 @@ async function updateBalanceDisplay(account) {
       if (balanceWei >= mintPriceWei && status.canMint) {
         UI.generateNFTBtn.disabled = false;
         UI.generateNFTBtn.title = '';
+        UI.generateNFTBtn.setAttribute('data-price', `${mintPriceFormatted} Base ETH`);
       } else {
         UI.generateNFTBtn.disabled = true;
+        UI.generateNFTBtn.setAttribute('data-price', `${mintPriceFormatted} Base ETH`);
         UI.generateNFTBtn.title = balanceWei < mintPriceWei ? 'Insufficient balance to mint' : 'Service temporarily unavailable';
       }
     }
