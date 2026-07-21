@@ -7,6 +7,8 @@ import { UI } from './state.js';
 import { showToast, showWarning, setButtonLoading, showProgress, hideProgress } from './ui.js';
 import { login, getNFTPrice, getContractAddress } from './api.js';
 
+let platformUnavailable = false;
+
 export async function updateChainStatus() {
   if (!window.ethereum || !UI.chainStatus) return;
   
@@ -103,11 +105,14 @@ async function updateBalanceDisplay(account) {
   const balanceDisplay = document.getElementById('balanceDisplay');
   if (!balanceDisplay) return;
   
+  platformUnavailable = false;
+  
   try {
     const statusRes = await fetch('/api/status');
     const status = await statusRes.json();
     
     if (!status.canMint) {
+      platformUnavailable = true;
       throw new Error('Service unavailable');
     }
     
@@ -156,6 +161,7 @@ async function updateBalanceDisplay(account) {
       UI.generateNFTBtn.title = 'Unable to check balance';
     }
     
+    platformUnavailable = true;
     showWarning('⛔ Platform temporarily unavailable due to external circumstances. Please try again later.', true);
   }
 }
@@ -163,6 +169,7 @@ async function updateBalanceDisplay(account) {
 export async function connectWallet(app) {
   setButtonLoading(UI.connectBtn, true);
   showProgress();
+  platformUnavailable = false;
   
   try {
     if (!window.ethereum) {
@@ -209,7 +216,12 @@ export async function connectWallet(app) {
     await updateBalanceDisplay(account);
     
     const tokenCount = app.tokens.filter(t => !t.isNFT).length;
-    showToast(`✅ Connected to ${vizChainConfig.name}! Loaded ${app.tokens.length} assets (${tokenCount} tokens, ${app.nftCenters.length} NFTs)`, 'success');
+    
+    if (platformUnavailable) {
+      showToast('⚠️ Platform operating in limited mode. Minting is disabled.', 'warning');
+    } else {
+      showToast(`✅ Connected to ${vizChainConfig.name}! Loaded ${app.tokens.length} assets (${tokenCount} tokens, ${app.nftCenters.length} NFTs)`, 'success');
+    }
     
   } catch (err) { 
     console.error(err);
