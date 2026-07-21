@@ -577,9 +577,9 @@ const App = Object.assign({}, AppState, {
 
   init() {
     console.log("🚀 Starting Wallet Visualizer with Arweave Permanent Storage...");
-    this.resetApp();
     initUI();
     resizeCanvas(this);
+    this.resetApp();
     
     if (MAINTENANCE_CONFIG.isMaintenance) {
       console.warn("⚠️ Application initialization stopped: Maintenance Mode is active.");
