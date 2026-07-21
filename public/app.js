@@ -504,8 +504,23 @@ const App = Object.assign({}, AppState, {
     if (UI.recordBtn) UI.recordBtn.disabled = false;
     if (UI.renderBtn) UI.renderBtn.disabled = false;
     if (UI.generateNFTBtn) {
-      const price = await getNFTPrice();
-      UI.generateNFTBtn.setAttribute('data-price', price);
+      try {
+        const statusRes = await fetch('/api/status');
+        const status = await statusRes.json();
+        
+        if (!status.canMint) {
+          throw new Error('Minting unavailable');
+        }
+        
+        const price = await getNFTPrice();
+        UI.generateNFTBtn.setAttribute('data-price', price);
+        UI.generateNFTBtn.disabled = false;
+      } catch (err) {
+        console.warn('Mint unavailable:', err.message);
+        UI.generateNFTBtn.setAttribute('data-price', 'Unavailable');
+        UI.generateNFTBtn.disabled = true;
+        showToast('⛔ Platform temporarily unavailable. Please try again later.', 'warning');
+      }
     }
   },
 
