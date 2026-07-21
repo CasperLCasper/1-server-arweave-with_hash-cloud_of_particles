@@ -355,9 +355,20 @@ const App = Object.assign({}, AppState, {
       
       console.log('✅ Server processed:', serverData);
       
+      const arweaveSuccess = serverData.arweave?.success || false;
+      
+      // ❌ Ja Arweave neizdevās - APSTĀJIES ŠEIT
+      if (!arweaveSuccess) {
+        showToast('⚠️ Arweave upload failed. Your deposit has been refunded.', 'warning');
+        showWarning('', false);
+        setButtonLoading(UI.generateNFTBtn, false);
+        this.showInfo = previousShowInfo;
+        return;
+      }
+      
+      // ✅ Arweave veiksmīgs - turpinam ar metadata un finalize
       const gw = ARWEAVE_GATEWAY;
       const imageUrl = serverData.image.id ? `${gw}${serverData.image.id}` : `local://${imageHash}`;
-      const arweaveSuccess = serverData.arweave?.success || false;
       const storageCostWei = serverData.storage?.costWei || "0";
       const storageCostEth = serverData.storage?.costEth || "0";
       
@@ -443,7 +454,6 @@ const App = Object.assign({}, AppState, {
       
       showWarning('', false);
       
-      const arweaveStatus = arweaveSuccess ? '✅' : '⚠️';
       alert(`✅ NFT minted!\n\n` +
         `Tx: ${tx.hash}\n` +
         `Price: ${ethers.formatEther(txValue)} ETH\n` +
@@ -453,9 +463,7 @@ const App = Object.assign({}, AppState, {
         `🔐 Content Hash (Basescan & ZIP): ${finalContentHash}\n` +
         `${metaId ? '📄 Arweave Metadata: ' + metaId + '\n' : ''}` +
         `${serverData.image?.id ? '🖼️ Arweave Image: ' + serverData.image.id + '\n' : ''}` +
-        `${serverData.video?.id ? '🎬 Arweave Video: ' + serverData.video.id + '\n' : ''}` +
-        `\n${arweaveStatus} Arweave: ${arweaveSuccess ? 'OK' : 'Failed (files saved locally)'}` +
-        `\n\n💾 All files saved as nft_assets_*.zip`);
+        `${serverData.video?.id ? '🎬 Arweave Video: ' + serverData.video.id + '\n' : ''}`);
       
       showToast('🔄 Refreshing view...', 'info');
       await switchToVizChain(VIZ_CHAINS[this.currentVizChain].chainIdHex);
