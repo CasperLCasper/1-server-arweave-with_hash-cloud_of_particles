@@ -1,6 +1,6 @@
 // functions/api/prepare-nft.js
 // Pēc veiksmīgas Arweave augšupielādes AUTOMĀTISKI izsauc finalizeMint
-// Ja Arweave neizdodas - AUTOMĀTISKI atgriež līdzekļus caur cancelMint
+// Ja Arweave neizdodas - cleanup robots atgriezīs līdzekļus pēc MAX_PENDING_MIN
 import { requireAuth } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
@@ -10,11 +10,6 @@ import axios from 'axios';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'];
 const MAX_SIZE = 50 * 1024 * 1024;
-
-const WALLET_NFT_ABI = [
-  "function cancelMint(address wallet) external",
-  "function getPendingMint(address wallet) external view returns (tuple(bytes32 imageHash, bytes32 videoHash, bytes32 contentHash, uint256 nonce, uint256 deposit, bool exists))"
-];
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -163,39 +158,7 @@ export async function onRequestPost(context) {
         console.warn('⚠️ Auto-finalize failed, will be picked up by cleanup robot:', finalizeError.message);
       }
     } else {
-      // ❌ Arweave neizdevās - atgriež līdzekļus
-      console.log('🔄 Arweave upload failed, initiating refund...');
-      
-      const CONTRACT_ADDRESS = env.CONTRACT_ADDRESS;
-      const ROBOT_PRIVATE_KEY = env.ROBOT_PRIVATE_KEY;
-      const ALCHEMY_RPC_URL = env.ALCHEMY_RPC_URL;
-      
-      if (CONTRACT_ADDRESS && ROBOT_PRIVATE_KEY && ALCHEMY_RPC_URL) {
-        try {
-          const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
-          const robotWallet = new ethers.Wallet(ROBOT_PRIVATE_KEY, provider);
-          const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, robotWallet);
-          
-          // Pārbauda, vai ir pending mint
-          const pendingMint = await contract.getPendingMint(user.address);
-          
-          if (pendingMint && pendingMint.exists) {
-            console.log(`🔄 Refunding ${ethers.formatEther(pendingMint.deposit)} ETH to ${user.address}...`);
-            const cancelTx = await contract.cancelMint(user.address);
-            console.log(`🔄 Cancel tx sent! Hash: ${cancelTx.hash}`);
-            await cancelTx.wait();
-            console.log('✅ Refund successful!');
-          } else {
-            console.log('ℹ️ No pending mint found for refund');
-          }
-        } catch (refundError) {
-          console.error('❌ Auto-refund failed:', refundError.message);
-          console.log('ℹ️ Refund will be processed by cleanup robot');
-        }
-      } else {
-        console.warn('⚠️ Cannot auto-refund: missing CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY, or ALCHEMY_RPC_URL');
-        console.log('ℹ️ Refund will be processed by cleanup robot');
-      }
+      console.log('⚠️ Arweave upload failed. Refund will be processed by cleanup robot.');
     }
 
     const responseData = {
