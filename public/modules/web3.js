@@ -104,7 +104,6 @@ async function updateBalanceDisplay(account) {
   if (!balanceDisplay) return;
   
   try {
-    // Pārbauda statusu pirms balance
     const statusRes = await fetch('/api/status');
     const status = await statusRes.json();
     
@@ -156,6 +155,8 @@ async function updateBalanceDisplay(account) {
       UI.generateNFTBtn.disabled = true;
       UI.generateNFTBtn.title = 'Unable to check balance';
     }
+    
+    showToast('⛔ Platform temporarily unavailable due to external circumstances. Please try again later.', 'warning');
   }
 }
 
