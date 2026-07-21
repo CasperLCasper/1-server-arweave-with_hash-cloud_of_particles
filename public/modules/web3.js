@@ -104,14 +104,16 @@ async function updateBalanceDisplay(account) {
   if (!balanceDisplay) return;
   
   try {
+    // Pārbauda statusu pirms balance
+    const statusRes = await fetch('/api/status');
+    const status = await statusRes.json();
+    
+    if (!status.rpc.available) {
+      throw new Error('RPC unavailable');
+    }
+    
     balanceDisplay.textContent = '💰 Checking balance...';
     balanceDisplay.className = 'balance-display checking';
-    
-    const selectedChainKey = UI.chainSelect ? UI.chainSelect.value : null;
-    const selectedChain = VIZ_CHAINS[selectedChainKey];
-    
-    const isAmoy = selectedChain?.chainIdHex?.toLowerCase() === '0x13882';
-    const vizTokenSymbol = isAmoy ? 'POL' : (selectedChain?.nativeCurrency || 'ETH');
     
     const baseMintRpc = getRpcUrl('baseSepolia') || 'https://sepolia.base.org';
     const baseProvider = new ethers.JsonRpcProvider(baseMintRpc);
@@ -137,12 +139,12 @@ async function updateBalanceDisplay(account) {
     }
     
     if (UI.generateNFTBtn) {
-      if (balanceWei >= mintPriceWei) {
+      if (balanceWei >= mintPriceWei && status.canMint) {
         UI.generateNFTBtn.disabled = false;
         UI.generateNFTBtn.title = '';
       } else {
         UI.generateNFTBtn.disabled = true;
-        UI.generateNFTBtn.title = 'Insufficient balance to mint';
+        UI.generateNFTBtn.title = balanceWei < mintPriceWei ? 'Insufficient balance to mint' : 'Service temporarily unavailable';
       }
     }
   } catch (error) {
@@ -199,9 +201,8 @@ export async function connectWallet(app) {
     await app.renderSnapshot(app.currentVizChain);
     
     UI.recordBtn.disabled = false;
-    
-    const price = await getNFTPrice();
-    UI.generateNFTBtn.setAttribute('data-price', price);
+    UI.generateNFTBtn.setAttribute('data-price', 'Checking...');
+    UI.generateNFTBtn.disabled = true;
     
     await updateChainStatus();
     await updateBalanceDisplay(account);
