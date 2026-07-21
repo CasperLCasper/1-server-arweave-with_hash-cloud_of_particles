@@ -4,7 +4,7 @@
 
 import { VIZ_CHAINS, MINT_CHAIN, getAllRpcUrls, getRpcUrl } from './chains.js';
 import { UI } from './state.js';
-import { showToast, setButtonLoading, showProgress, hideProgress } from './ui.js';
+import { showToast, showWarning, setButtonLoading, showProgress, hideProgress } from './ui.js';
 import { login, getNFTPrice, getContractAddress } from './api.js';
 
 export async function updateChainStatus() {
@@ -156,7 +156,7 @@ async function updateBalanceDisplay(account) {
       UI.generateNFTBtn.title = 'Unable to check balance';
     }
     
-    showToast('⛔ Platform temporarily unavailable due to external circumstances. Please try again later.', 'warning');
+    showWarning('⛔ Platform temporarily unavailable due to external circumstances. Please try again later.', true);
   }
 }
 
