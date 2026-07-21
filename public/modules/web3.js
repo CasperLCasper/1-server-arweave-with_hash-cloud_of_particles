@@ -107,8 +107,8 @@ async function updateBalanceDisplay(account) {
     const statusRes = await fetch('/api/status');
     const status = await statusRes.json();
     
-    if (!status.rpc.available) {
-      throw new Error('RPC unavailable');
+    if (!status.canMint) {
+      throw new Error('Service unavailable');
     }
     
     balanceDisplay.textContent = '💰 Checking balance...';
