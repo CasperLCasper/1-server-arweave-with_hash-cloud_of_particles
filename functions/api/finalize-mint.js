@@ -13,13 +13,16 @@ const WALLET_NFT_ABI = [
   "function mintPrice() public view returns (uint256)"
 ];
 
-function getFallbackProvider(env) {
-  const rpcUrls = [];
-  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
-  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
-  if (rpcUrls.length === 0) return null;
-  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
-  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+async function getProvider(env) {
+  if (env.ALCHEMY_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
+  }
+  if (env.MORALIS_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Moralis RPC also failed'); }
+  }
+  return null;
 }
 
 function parseMetadataUri(uri) {
@@ -33,7 +36,7 @@ function parseMetadataUri(uri) {
 
 async function executeRobotFinalize(robotSigner, contractAddress, { wallet, fullMetadataUri, storageCostWei, finalContentHash }) {
   const contractWithSigner = new ethers.Contract(contractAddress, WALLET_NFT_ABI, robotSigner);
-  console.log(`🤖 Finalize robot: calling finalizeMint...`);
+  console.log('🤖 Finalize robot: calling finalizeMint...');
   const finalizeTx = await contractWithSigner.finalizeMint(wallet, fullMetadataUri, storageCostWei || 0, finalContentHash);
   console.log(`🤖 Finalize tx sent! Hash: ${finalizeTx.hash}`);
   await finalizeTx.wait();
@@ -61,54 +64,36 @@ async function purchaseStorageCredits(provider, storageKey, costWei) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-
   try {
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
-    if (!user?.address) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
-    }
+    if (!user?.address) return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
 
     if (!(await checkRateLimit({ key: `finalize:${user.address.toLowerCase()}`, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ success: false, error: 'Too many requests' }), { status: 429, headers: { "Content-Type": "application/json" } });
     }
 
     let body;
-    try { body = await request.json(); } catch {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
+    try { body = await request.json(); } catch { return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const { wallet, metadataUri, storageCostWei, contentHash } = body;
-    if (!wallet || !metadataUri || !ethers.isAddress(wallet)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid input' }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
-    if (user.address.toLowerCase() !== wallet.toLowerCase()) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
-    }
+    if (!wallet || !metadataUri || !ethers.isAddress(wallet)) return new Response(JSON.stringify({ success: false, error: 'Invalid input' }), { status: 400, headers: { "Content-Type": "application/json" } });
+    if (user.address.toLowerCase() !== wallet.toLowerCase()) return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
 
     const finalContentHash = (contentHash && /^0x[0-9a-fA-F]{64}$/.test(contentHash)) ? contentHash : ethers.ZeroHash;
     const fullMetadataUri = parseMetadataUri(metadataUri);
     const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY, ARWEAVE_STORAGE_KEY } = env;
+    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY) return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
 
-    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY) {
-      return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
-    }
-
-    const provider = getFallbackProvider(env);
-    if (!provider) {
-      return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
-    }
+    const provider = await getProvider(env);
+    if (!provider) return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
 
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
-    
     let pendingMint;
     try { pendingMint = await contract.getPendingMint(wallet); } catch (err) {
       return new Response(JSON.stringify({ success: false, error: 'Cannot read pending mint: ' + err.message }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
-
-    if (!pendingMint?.exists) {
-      return new Response(JSON.stringify({ success: false, error: 'No pending mint found for this wallet' }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
+    if (!pendingMint?.exists) return new Response(JSON.stringify({ success: false, error: 'No pending mint found for this wallet' }), { status: 400, headers: { "Content-Type": "application/json" } });
 
     console.log('🔍 FINALIZE MINT:', { wallet, deposit: ethers.formatEther(pendingMint.deposit) });
 
@@ -121,7 +106,6 @@ export async function onRequestPost(context) {
     }
 
     await purchaseStorageCredits(provider, ARWEAVE_STORAGE_KEY, storageCostWei);
-
     return new Response(JSON.stringify({ success: true, wallet, metadataUri: fullMetadataUri, storageCostWei: storageCostWei || "0", contentHash: finalContentHash }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
     console.error('💥 Finalize mint error:', error);
