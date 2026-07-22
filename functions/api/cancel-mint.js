@@ -50,6 +50,14 @@ async function validateAndGetPending(contract, wallet) {
   return pendingMint;
 }
 
+function getFallbackProvider(env) {
+  const rpcUrls = [];
+  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
+  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
+  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
+  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   try {
@@ -76,12 +84,12 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
     }
 
-    const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY, ALCHEMY_RPC_URL } = env;
-    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY || !ALCHEMY_RPC_URL) {
+    const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY } = env;
+    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
-    const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+    const provider = getFallbackProvider(env);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
 
     let pendingMint;
