@@ -1,6 +1,5 @@
 // ============================================================
 // CLEANUP ROBOT — Skenē līgumu, atceļ pending mintus > 30 min
-// Izmanto vienoto NonceManager caur getRobotSigner
 // Alchemy (primārais) → Moralis RPC (fallback)
 // ============================================================
 import { ethers } from 'ethers';
@@ -12,13 +11,22 @@ const WALLET_NFT_ABI = [
   "function cancelMint(address) external"
 ];
 
-function getFallbackProvider(env) {
-  const rpcUrls = [];
-  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
-  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
-  if (rpcUrls.length === 0) return null;
-  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
-  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+async function getProvider(env) {
+  if (env.ALCHEMY_RPC_URL) {
+    try {
+      const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL);
+      await p.getBlockNumber();
+      return p;
+    } catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
+  }
+  if (env.MORALIS_RPC_URL) {
+    try {
+      const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL);
+      await p.getBlockNumber();
+      return p;
+    } catch (e) { console.warn('Moralis RPC also failed'); }
+  }
+  return null;
 }
 
 export function trackPendingMint(walletAddr) {}
@@ -33,7 +41,7 @@ export async function executePendingCleanup(env) {
     return { checked: 0, cancelled: 0, errors: 0 };
   }
 
-  const provider = getFallbackProvider(env);
+  const provider = await getProvider(env);
   if (!provider) {
     console.log("🧹 Cleanup: No RPC configured, skipping...");
     return { checked: 0, cancelled: 0, errors: 0 };
@@ -46,11 +54,11 @@ export async function executePendingCleanup(env) {
   try {
     allAddresses = await contract.getAllPendingAddresses();
   } catch (e) {
-    console.error("❌ Neizdevās ielasīt pending adreses no viedā līguma:", e.message);
+    console.error("❌ Neizdevās ielasīt pending adreses:", e.message);
     return { checked: 0, cancelled: 0, errors: 1 };
   }
 
-  console.log(`🧹 Cleanup: checking ${allAddresses.length} on-chain pending mints...`);
+  console.log(`🧹 Cleanup: checking ${allAddresses.length} pending mints...`);
 
   const results = { checked: allAddresses.length, cancelled: 0, errors: 0 };
   const nowSec = Math.floor(Date.now() / 1000);
@@ -64,17 +72,17 @@ export async function executePendingCleanup(env) {
       const elapsedMin = (elapsedSec / 60).toFixed(1);
 
       if (elapsedSec > MAX_MIN * 60) {
-        console.log(`🧹 Atceļam un atgriežam līdzekļus: ${addr} (gaida jau ${elapsedMin} min)...`);
+        console.log(`🧹 Atceļam: ${addr} (${elapsedMin} min)...`);
         const tx = await contract.cancelMint(addr);
-        console.log(`🧹 Atcelšanas transakcija nosūtīta! Hash: ${tx.hash}`);
+        console.log(`🧹 Tx: ${tx.hash}`);
         await tx.wait();
         results.cancelled++;
-        console.log(`🧹 ✅ Refunded ${ethers.formatEther(p.deposit)} ETH to ${addr.substring(0, 10)}...`);
+        console.log(`🧹 ✅ Refunded ${ethers.formatEther(p.deposit)} ETH`);
       } else {
-        console.log(`  ⏳ ${addr.substring(0, 10)}... gaida rindā (${elapsedMin} min / limits ${MAX_MIN} min)`);
+        console.log(`  ⏳ ${addr.substring(0, 10)}... (${elapsedMin} min / ${MAX_MIN} min)`);
       }
     } catch (e) {
-      console.error(`❌ Kļūda apstrādājot adresi ${addr}:`, e.message);
+      console.error(`❌ Kļūda: ${addr}:`, e.message);
       results.errors++;
     }
   }
