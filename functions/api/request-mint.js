@@ -13,13 +13,16 @@ const WALLET_NFT_ABI = [
 
 const CHAIN_ID = 84532;
 
-function getFallbackProvider(env) {
-  const rpcUrls = [];
-  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
-  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
-  if (rpcUrls.length === 0) return null;
-  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
-  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+async function getProvider(env) {
+  if (env.ALCHEMY_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
+  }
+  if (env.MORALIS_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Moralis RPC also failed'); }
+  }
+  return null;
 }
 
 function parseHashes(imageHash, videoHash, contentHash) {
@@ -54,10 +57,8 @@ function encodeMintData(wallet, hashes, nonce, signature) {
 }
 
 async function estimateGasLimit(provider, wallet, contractAddress, data, mintPrice) {
-  try {
-    const e = await provider.estimateGas({ from: wallet, to: contractAddress, data, value: mintPrice });
-    return (e * 130n) / 100n;
-  } catch { return 380000n; }
+  try { const e = await provider.estimateGas({ from: wallet, to: contractAddress, data, value: mintPrice }); return (e * 130n) / 100n; }
+  catch { return 380000n; }
 }
 
 export async function onRequestPost(context) {
@@ -65,18 +66,14 @@ export async function onRequestPost(context) {
   try {
     const user = await requireAuth(request, env);
     if (user instanceof Response) return user;
-    if (!user?.address) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
-    }
+    if (!user?.address) return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
 
     if (!(await checkRateLimit({ key: `mint:${user.address.toLowerCase()}`, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ success: false, error: 'Too many requests' }), { status: 429, headers: { "Content-Type": "application/json" } });
     }
 
     let body;
-    try { body = await request.json(); } catch {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
+    try { body = await request.json(); } catch { return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const { wallet, imageHash, videoHash, contentHash } = body;
     if (!wallet || !ethers.isAddress(wallet) || user.address.toLowerCase() !== wallet.toLowerCase()) {
@@ -88,23 +85,15 @@ export async function onRequestPost(context) {
 
     const hashes = parseHashes(imageHash, videoHash, contentHash);
     const { CONTRACT_ADDRESS, SERVER_PRIVATE_KEY } = env;
-    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY) {
-      return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
-    }
+    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY) return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
 
-    const provider = getFallbackProvider(env);
-    if (!provider) {
-      return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
-    }
+    const provider = await getProvider(env);
+    if (!provider) return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
 
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
-
     let state;
-    try {
-      state = await readContractState(contract, wallet);
-    } catch (err) {
-      return new Response(JSON.stringify({ success: false, error: 'Cannot read contract state: ' + err.message }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
+    try { state = await readContractState(contract, wallet); }
+    catch (err) { return new Response(JSON.stringify({ success: false, error: 'Cannot read contract state: ' + err.message }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const serverWallet = new ethers.Wallet(SERVER_PRIVATE_KEY);
     console.log('🔍 REQUEST MINT: price:', ethers.formatEther(state.mintPrice), 'ETH nonce:', state.currentNonce.toString());
