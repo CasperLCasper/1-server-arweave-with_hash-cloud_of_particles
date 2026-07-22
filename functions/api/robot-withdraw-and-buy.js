@@ -6,13 +6,16 @@ const WALLET_NFT_ABI = [
   "function withdraw(uint256 storageCostWei) external"
 ];
 
-function getFallbackProvider(env) {
-  const rpcUrls = [];
-  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
-  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
-  if (rpcUrls.length === 0) return null;
-  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
-  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+async function getProvider(env) {
+  if (env.ALCHEMY_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
+  }
+  if (env.MORALIS_RPC_URL) {
+    try { const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL); await p.getBlockNumber(); return p; }
+    catch (e) { console.warn('Moralis RPC also failed'); }
+  }
+  return null;
 }
 
 export async function onRequestPost(context) {
@@ -38,7 +41,7 @@ export async function onRequestPost(context) {
     if (!ARWEAVE_STORAGE_KEY) throw new Error('ARWEAVE_STORAGE_KEY not configured');
     if (!CONTRACT_ADDRESS) throw new Error('CONTRACT_ADDRESS not configured');
 
-    const provider = getFallbackProvider(env);
+    const provider = await getProvider(env);
     if (!provider) throw new Error('No RPC configured');
 
     const robotWallet = new ethers.Wallet(ROBOT_PRIVATE_KEY, provider);
