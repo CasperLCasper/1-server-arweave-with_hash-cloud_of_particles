@@ -44,9 +44,9 @@ Izveidojiet failu ceļā `.github/workflows/update-lock.yml` ar šādu saturu:
 name: Update package-lock.json
 
 on:
-  workflow_dispatch: # Ļauj manuāli palaist no GitHub Actions paneļa jebkurā brīdī
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 1' # Automātiski palaist katru pirmdienu plkst. 00:00 UTC
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: write
@@ -60,10 +60,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm' # Paātrina procesu, izmantojot kešatmiņu nākamajās reizēs
+          cache: 'npm'
 
-      - run: npm update # Atjaunina pakotnes līdz pieļaujamajām versijām un sakārto lock failu
-
+      - run: npm install --package-lock-only
+      
       - name: Commit & Push
         run: |
           git config user.name "github-actions[bot]"
