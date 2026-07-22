@@ -6,6 +6,15 @@ const WALLET_NFT_ABI = [
   "function withdraw(uint256 storageCostWei) external"
 ];
 
+function getFallbackProvider(env) {
+  const rpcUrls = [];
+  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
+  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
+  if (rpcUrls.length === 0) return null;
+  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
+  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -24,89 +33,60 @@ export async function onRequestPost(context) {
     const ROBOT_PRIVATE_KEY = env.ROBOT_PRIVATE_KEY;
     const ARWEAVE_STORAGE_KEY = env.ARWEAVE_STORAGE_KEY;
     const CONTRACT_ADDRESS = env.CONTRACT_ADDRESS;
-    const ALCHEMY_RPC_URL = env.ALCHEMY_RPC_URL || 'https://sepolia.base.org';
 
     if (!ROBOT_PRIVATE_KEY) throw new Error('ROBOT_PRIVATE_KEY not configured');
     if (!ARWEAVE_STORAGE_KEY) throw new Error('ARWEAVE_STORAGE_KEY not configured');
     if (!CONTRACT_ADDRESS) throw new Error('CONTRACT_ADDRESS not configured');
 
-    const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
-    
-    // 1. Withdraw robots — izsauc withdraw(storageCostWei)
+    const provider = getFallbackProvider(env);
+    if (!provider) throw new Error('No RPC configured');
+
     const robotWallet = new ethers.Wallet(ROBOT_PRIVATE_KEY, provider);
-    const robotAddress = await robotWallet.getAddress();
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, robotWallet);
     
-    console.log(`🤖 Withdraw robot (${robotAddress}): calling withdraw(${storageCostWei})...`);
+    console.log(`🤖 Withdraw robot: calling withdraw(${storageCostWei})...`);
     const withdrawTx = await contract.withdraw(storageCostWei);
     console.log(`🤖 Withdraw robot: tx sent! Hash: ${withdrawTx.hash}`);
     await withdrawTx.wait();
     console.log('🤖 Withdraw robot: ✅ Funds distributed!');
 
-    // 2. Webhook robots — pērk kredītus TIKAI par storageCostWei
     const storageWallet = new ethers.Wallet(ARWEAVE_STORAGE_KEY, provider);
-    const storageAddress = await storageWallet.getAddress();
-    const storageBalance = await provider.getBalance(storageAddress);
-    
-    console.log(`🤖 Webhook robot: storage balance: ${ethers.formatEther(storageBalance)} ETH`);
+    const storageBalance = await provider.getBalance(await storageWallet.getAddress());
+    console.log(`🤖 Storage balance: ${ethers.formatEther(storageBalance)} ETH`);
 
     const storageCostBigInt = BigInt(storageCostWei);
     const gasReserve = ethers.parseEther("0.0001");
     
     if (storageBalance >= storageCostBigInt + gasReserve) {
-      console.log(`🤖 Webhook robot: buying credits for ${ethers.formatEther(storageCostWei)} ETH...`);
+      console.log(`🤖 Buying credits for ${ethers.formatEther(storageCostWei)} ETH...`);
       
       const signer = new EthereumSigner(ARWEAVE_STORAGE_KEY);
       const turbo = TurboFactory.authenticated({
-        signer,
-        token: 'base-eth',
-        gatewayUrl: 'https://sepolia.base.org',
+        signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
         paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
         uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
       });
 
       const { winc: before } = await turbo.getBalance();
-      
       try {
         await turbo.topUpWithTokens({ tokenAmount: storageCostWei });
       } catch (topUpError) {
-        console.warn('⚠️ topUpWithTokens failed, retrying with submitFundTransaction...');
         const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
-        if (txIdMatch) {
-          const txId = txIdMatch[0];
-          console.log(`🤖 Submitting fund transaction: ${txId}`);
-          await turbo.submitFundTransaction({ txId: txId });
-        } else {
-          throw topUpError;
-        }
+        if (txIdMatch) await turbo.submitFundTransaction({ txId: txIdMatch[0] });
+        else throw topUpError;
       }
-      
       const { winc: after } = await turbo.getBalance();
-      
-      console.log('🤖 Webhook robot: ✅ Credits purchased!', {
-        ethSpent: ethers.formatEther(storageCostWei),
-        gasReserveLeft: ethers.formatEther(gasReserve),
-        creditsBefore: before.toString(),
-        creditsAfter: after.toString(),
-        added: (after - before).toString()
-      });
+      console.log('🤖 ✅ Credits purchased!', { added: (after - before).toString() });
     } else {
-      console.log(`🤖 Webhook robot: not enough funds. Need ${ethers.formatEther(storageCostBigInt + gasReserve)} ETH, have ${ethers.formatEther(storageBalance)} ETH`);
+      console.log('🤖 Not enough funds for credits.');
     }
 
     return new Response(JSON.stringify({
-      success: true,
-      withdrawTx: withdrawTx.hash,
-      storageBalance: storageBalance.toString(),
-      creditsPurchased: storageCostWei
-    }), {
-      status: 200, headers: { "Content-Type": "application/json" }
-    });
+      success: true, withdrawTx: withdrawTx.hash, storageBalance: storageBalance.toString(), creditsPurchased: storageCostWei
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
     console.error('💥 Robot error:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 500, headers: { "Content-Type": "application/json" }
-    });
+    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }
