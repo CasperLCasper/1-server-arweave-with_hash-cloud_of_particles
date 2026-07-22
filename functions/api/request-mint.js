@@ -13,6 +13,15 @@ const WALLET_NFT_ABI = [
 
 const CHAIN_ID = 84532;
 
+function getFallbackProvider(env) {
+  const rpcUrls = [];
+  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
+  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
+  if (rpcUrls.length === 0) return null;
+  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
+  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+}
+
 function parseHashes(imageHash, videoHash, contentHash) {
   return {
     imageHash,
@@ -23,9 +32,7 @@ function parseHashes(imageHash, videoHash, contentHash) {
 
 async function readContractState(contract, wallet) {
   const [mintPrice, currentNonce, contractSigner] = await Promise.all([
-    contract.mintPrice(),
-    contract.getNonce(wallet),
-    contract.signer()
+    contract.mintPrice(), contract.getNonce(wallet), contract.signer()
   ]);
   return { mintPrice, currentNonce, contractSigner };
 }
@@ -39,22 +46,18 @@ async function createMintSignature(serverWallet, wallet, hashes, nonce, contract
       { name: 'nonce', type: 'uint256' }
     ]
   };
-  const value = { wallet, imageHash: hashes.imageHash, videoHash: hashes.videoHash, contentHash: hashes.contentHash, nonce };
-  return serverWallet.signTypedData(domain, types, value);
+  return serverWallet.signTypedData(domain, types, { wallet, imageHash: hashes.imageHash, videoHash: hashes.videoHash, contentHash: hashes.contentHash, nonce });
 }
 
 function encodeMintData(wallet, hashes, nonce, signature) {
-  const iface = new ethers.Interface(WALLET_NFT_ABI);
-  return iface.encodeFunctionData('requestMint', [wallet, hashes.imageHash, hashes.videoHash, hashes.contentHash, nonce, signature]);
+  return new ethers.Interface(WALLET_NFT_ABI).encodeFunctionData('requestMint', [wallet, hashes.imageHash, hashes.videoHash, hashes.contentHash, nonce, signature]);
 }
 
 async function estimateGasLimit(provider, wallet, contractAddress, data, mintPrice) {
   try {
-    const estimated = await provider.estimateGas({ from: wallet, to: contractAddress, data, value: mintPrice });
-    return (estimated * 130n) / 100n;
-  } catch {
-    return 380000n;
-  }
+    const e = await provider.estimateGas({ from: wallet, to: contractAddress, data, value: mintPrice });
+    return (e * 130n) / 100n;
+  } catch { return 380000n; }
 }
 
 export async function onRequestPost(context) {
@@ -76,23 +79,24 @@ export async function onRequestPost(context) {
     }
 
     const { wallet, imageHash, videoHash, contentHash } = body;
-    if (!wallet || !ethers.isAddress(wallet)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid input' }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
-    if (user.address.toLowerCase() !== wallet.toLowerCase()) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
+    if (!wallet || !ethers.isAddress(wallet) || user.address.toLowerCase() !== wallet.toLowerCase()) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid or unauthorized wallet' }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
     if (!imageHash || !/^0x[0-9a-fA-F]{64}$/.test(imageHash)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid or missing image hash' }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
     const hashes = parseHashes(imageHash, videoHash, contentHash);
-    const { CONTRACT_ADDRESS, SERVER_PRIVATE_KEY, ALCHEMY_RPC_URL } = env;
-    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY || !ALCHEMY_RPC_URL) {
+    const { CONTRACT_ADDRESS, SERVER_PRIVATE_KEY } = env;
+    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
-    const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+    const provider = getFallbackProvider(env);
+    if (!provider) {
+      return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
 
     let state;
