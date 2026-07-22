@@ -20,12 +20,12 @@ async function checkMoralisAPI(apiKey, status) {
   } catch (err) { status.moralis.error = err.message; console.error(`❌ [STATUS] Moralis API: ${err.message}`); }
 }
 
-async function checkAlchemyRPC(rpcUrl, status) {
-  if (!rpcUrl) { status.rpc.error = 'RPC URL not configured'; return; }
+async function checkRPC(rpcUrl, label, statusObj) {
+  if (!rpcUrl) { statusObj.error = 'RPC URL not configured'; return; }
   try {
     await (new ethers.JsonRpcProvider(rpcUrl)).getBlockNumber();
-    status.rpc.available = true; console.log('✅ [STATUS] Alchemy RPC pieejams');
-  } catch (err) { status.rpc.error = err.message; console.error(`❌ [STATUS] Alchemy RPC: ${err.message}`); }
+    statusObj.available = true; console.log(`✅ [STATUS] ${label} pieejams`);
+  } catch (err) { statusObj.error = err.message; console.error(`❌ [STATUS] ${label}: ${err.message}`); }
 }
 
 export async function onRequestGet(context) {
@@ -33,18 +33,21 @@ export async function onRequestGet(context) {
   const status = {
     alchemy: { available: false, error: null },
     moralis: { available: false, error: null },
-    rpc: { available: false, error: null }
+    rpc: { alchemy: { available: false, error: null }, moralis: { available: false, error: null } }
   };
 
   await Promise.all([
     checkAlchemyAPI(env.ALCHEMY_API_KEY, status),
     checkMoralisAPI(env.MORALIS_API_KEY, status),
-    checkAlchemyRPC(env.ALCHEMY_RPC_URL, status)
+    checkRPC(env.ALCHEMY_RPC_URL, 'Alchemy RPC', status.rpc.alchemy),
+    checkRPC(env.MORALIS_RPC_URL, 'Moralis RPC', status.rpc.moralis)
   ]);
 
   const anyAvailable = status.alchemy.available || status.moralis.available;
-  const canMint = anyAvailable && status.rpc.available;
-  console.log(`📊 [STATUS] Dati: ${anyAvailable ? '✅' : '❌'} | RPC: ${status.rpc.available ? '✅' : '❌'} | Mint: ${canMint ? '✅' : '❌'}`);
+  const rpcAvailable = status.rpc.alchemy.available || status.rpc.moralis.available;
+  const canMint = anyAvailable && rpcAvailable;
+
+  console.log(`📊 [STATUS] Dati: ${anyAvailable ? '✅' : '❌'} | RPC: ${rpcAvailable ? '✅' : '❌'} | Mint: ${canMint ? '✅' : '❌'}`);
 
   return new Response(JSON.stringify({ ...status, canMint, anyAvailable }), {
     status: 200, headers: { 'Content-Type': 'application/json' }
