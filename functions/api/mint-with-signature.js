@@ -11,6 +11,15 @@ const WALLET_NFT_ABI = [
 
 const CHAIN_ID = 84532;
 
+function getFallbackProvider(env) {
+  const rpcUrls = [];
+  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
+  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
+  if (rpcUrls.length === 0) return null;
+  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
+  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+}
+
 function parseHashes(imageHash, videoHash, contentHash) {
   return {
     imageHash,
@@ -76,12 +85,16 @@ export async function onRequestPost(context) {
     }
 
     const hashes = parseHashes(imageHash, videoHash, contentHash);
-    const { CONTRACT_ADDRESS, SERVER_PRIVATE_KEY, ALCHEMY_RPC_URL } = env;
-    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY || !ALCHEMY_RPC_URL) {
+    const { CONTRACT_ADDRESS, SERVER_PRIVATE_KEY } = env;
+    if (!CONTRACT_ADDRESS || !SERVER_PRIVATE_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
-    const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+    const provider = getFallbackProvider(env);
+    if (!provider) {
+      return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
 
     let state;
