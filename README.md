@@ -62,7 +62,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - run: npm install --package-lock-only
+      - run: npm install --package-lock-only --ignore-scripts
       
       - name: Commit & Push
         run: |
