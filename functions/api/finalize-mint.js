@@ -13,6 +13,15 @@ const WALLET_NFT_ABI = [
   "function mintPrice() public view returns (uint256)"
 ];
 
+function getFallbackProvider(env) {
+  const rpcUrls = [];
+  if (env.ALCHEMY_RPC_URL) rpcUrls.push(env.ALCHEMY_RPC_URL);
+  if (env.MORALIS_RPC_URL) rpcUrls.push(env.MORALIS_RPC_URL);
+  if (rpcUrls.length === 0) return null;
+  const providers = rpcUrls.map(url => new ethers.JsonRpcProvider(url));
+  return providers.length > 1 ? new ethers.FallbackProvider(providers, 1) : providers[0];
+}
+
 function parseMetadataUri(uri) {
   const trimmed = uri.trim();
   if (trimmed.startsWith('{')) return trimmed;
@@ -23,14 +32,9 @@ function parseMetadataUri(uri) {
 }
 
 async function executeRobotFinalize(robotSigner, contractAddress, { wallet, fullMetadataUri, storageCostWei, finalContentHash }) {
-  const robotAddress = await robotSigner.getAddress();
   const contractWithSigner = new ethers.Contract(contractAddress, WALLET_NFT_ABI, robotSigner);
-  
-  console.log(`🤖 Finalize robot (${robotAddress}): calling finalizeMint...`);
-  
-  const finalizeTx = await contractWithSigner.finalizeMint(
-    wallet, fullMetadataUri, storageCostWei || 0, finalContentHash
-  );
+  console.log(`🤖 Finalize robot: calling finalizeMint...`);
+  const finalizeTx = await contractWithSigner.finalizeMint(wallet, fullMetadataUri, storageCostWei || 0, finalContentHash);
   console.log(`🤖 Finalize tx sent! Hash: ${finalizeTx.hash}`);
   await finalizeTx.wait();
   console.log('🤖 ✅ Mint finalized! NFT created.');
@@ -38,94 +42,21 @@ async function executeRobotFinalize(robotSigner, contractAddress, { wallet, full
 
 async function purchaseStorageCredits(provider, storageKey, costWei) {
   if (!storageKey || !costWei) return;
-  
-  const divider = '═'.repeat(50);
-  
   try {
-    console.log(`\n${divider}`);
-    console.log('💳 KREDĪTU PIRKŠANA');
-    console.log(divider);
-    
     const storageWallet = new ethers.Wallet(storageKey, provider);
-    const storageAddress = await storageWallet.getAddress();
-    const storageBalance = await provider.getBalance(storageAddress);
-    console.log(`🏦 Storage maks: ${storageAddress}`);
-    console.log(`💰 ETH balance: ${ethers.formatEther(storageBalance)} ETH`);
-    
-    const storageCostBigInt = BigInt(costWei);
-    const gasReserve = ethers.parseEther("0.0001");
-    
-    if (storageBalance < storageCostBigInt + gasReserve) {
-      console.log('❌ Nepietiekami līdzekļu kredītu pirkšanai');
-      console.log(divider);
-      return;
-    }
-    
-    const costEth = ethers.formatEther(costWei);
-    console.log(`🛒 Pērkam kredītus par ${costEth} ETH (${costWei} wei)...`);
-    
+    const storageBalance = await provider.getBalance(await storageWallet.getAddress());
+    if (storageBalance < BigInt(costWei) + ethers.parseEther("0.0001")) return;
     const signer = new EthereumSigner(storageKey);
     const turbo = TurboFactory.authenticated({
-      signer, 
-      token: 'base-eth', 
-      gatewayUrl: 'https://sepolia.base.org',
+      signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
       paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
       uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
     });
-    
     const { winc: before } = await turbo.getBalance();
-    console.log(`📊 Kredīti pirms: ${before.toString()}`);
-    
-    try {
-      const topUpResult = await turbo.topUpWithTokens({ tokenAmount: costWei });
-      console.log(`✅ Transakcija izveidota!`);
-      console.log(`   TX ID: ${topUpResult.id}`);
-      console.log(`   Statuss: ${topUpResult.status}`);
-      console.log(`   Summa: ${topUpResult.quantity} wei`);
-      
-      if (topUpResult.status === 'pending') {
-        console.log(`⏳ Gaidam apstiprinājumu...`);
-        await new Promise(resolve => setTimeout(resolve, 30000));
-        
-        const { winc: after } = await turbo.getBalance();
-        const added = after - before;
-        
-        if (added > 0n) {
-          console.log(`✅ Kredīti pievienoti! +${added.toString()}`);
-          console.log(`📊 Kredīti pēc: ${after.toString()}`);
-        } else {
-          console.log(`⏳ Transakcija vēl nav apstiprināta (jāpagaida ilgāk)`);
-          console.log(`📊 Kredīti pēc: ${after.toString()}`);
-        }
-      }
-    } catch (topUpError) {
-      console.warn('⚠️ topUpWithTokens neizdevās:', topUpError.message);
-      
-      const txIdMatch = topUpError.message.match(/0x[a-fA-F0-9]{64}/);
-      if (txIdMatch) {
-        const txId = txIdMatch[0];
-        console.log(`🔄 Mēģinam submitFundTransaction: ${txId}`);
-        
-        try {
-          await turbo.submitFundTransaction({ txId: txId });
-          console.log(`✅ submitFundTransaction veiksmīgs!`);
-          console.log(`⏳ Gaidam apstiprinājumu...`);
-          await new Promise(resolve => setTimeout(resolve, 10000));
-          
-          const { winc: after } = await turbo.getBalance();
-          const added = after - before;
-          console.log(`📊 Kredīti pēc: ${after.toString()}`);
-          console.log(`📊 Pievienoti: ${added.toString()}`);
-        } catch (submitError) {
-          console.error('❌ submitFundTransaction neizdevās:', submitError.message);
-        }
-      }
-    }
-    
-    console.log(divider + '\n');
-  } catch (creditError) {
-    console.warn('⚠️ Kredītu pirkšanas kļūda:', creditError.message);
-  }
+    await turbo.topUpWithTokens({ tokenAmount: costWei });
+    const { winc: after } = await turbo.getBalance();
+    console.log('🤖 ✅ Credits purchased!', { added: (after - before).toString() });
+  } catch (e) { console.warn('⚠️ Credit purchase failed:', e.message); }
 }
 
 export async function onRequestPost(context) {
@@ -138,13 +69,12 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
     }
 
-    const rateKey = `finalize:${user.address.toLowerCase()}`;
-    if (!(await checkRateLimit({ key: rateKey, limit: 5, windowMs: 60000 }, env))) {
+    if (!(await checkRateLimit({ key: `finalize:${user.address.toLowerCase()}`, limit: 5, windowMs: 60000 }, env))) {
       return new Response(JSON.stringify({ success: false, error: 'Too many requests' }), { status: 429, headers: { "Content-Type": "application/json" } });
     }
 
     let body;
-    try { body = await request.json(); } catch (e) {
+    try { body = await request.json(); } catch {
       return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
@@ -152,24 +82,23 @@ export async function onRequestPost(context) {
     if (!wallet || !metadataUri || !ethers.isAddress(wallet)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid input' }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
-
     if (user.address.toLowerCase() !== wallet.toLowerCase()) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
     }
 
     const finalContentHash = (contentHash && /^0x[0-9a-fA-F]{64}$/.test(contentHash)) ? contentHash : ethers.ZeroHash;
     const fullMetadataUri = parseMetadataUri(metadataUri);
+    const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY, ARWEAVE_STORAGE_KEY } = env;
 
-    const CONTRACT_ADDRESS = env.CONTRACT_ADDRESS;
-    const ROBOT_PRIVATE_KEY = env.ROBOT_PRIVATE_KEY;
-    const ARWEAVE_STORAGE_KEY = env.ARWEAVE_STORAGE_KEY;
-    const ALCHEMY_RPC_URL = env.ALCHEMY_RPC_URL;
-
-    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY || !ALCHEMY_RPC_URL) {
+    if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
-    const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+    const provider = getFallbackProvider(env);
+    if (!provider) {
+      return new Response(JSON.stringify({ success: false, error: 'No RPC configured' }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
     const contract = new ethers.Contract(CONTRACT_ADDRESS, WALLET_NFT_ABI, provider);
     
     let pendingMint;
@@ -181,14 +110,13 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: false, error: 'No pending mint found for this wallet' }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
-    console.log('🔍 FINALIZE MINT DEBUG:', { wallet, metadataUri: fullMetadataUri, storageCostEth: ethers.formatEther(storageCostWei || "0"), contentHash: finalContentHash, deposit: ethers.formatEther(pendingMint.deposit) });
+    console.log('🔍 FINALIZE MINT:', { wallet, deposit: ethers.formatEther(pendingMint.deposit) });
 
     try {
       const robotSigner = getRobotSigner(env, provider);
       await executeRobotFinalize(robotSigner, CONTRACT_ADDRESS, { wallet, fullMetadataUri, storageCostWei, finalContentHash });
       clearPendingTrack(wallet);
     } catch (finalizeError) {
-      console.error('❌ Finalize failed:', finalizeError.message);
       return new Response(JSON.stringify({ success: false, error: 'Finalize failed: ' + finalizeError.message }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
 
