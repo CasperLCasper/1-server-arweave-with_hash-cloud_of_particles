@@ -1,12 +1,15 @@
 import { ethers } from 'ethers';
 
-async function checkAlchemyAPI(apiKey, status) {
-  if (!apiKey) { status.alchemy.error = 'API key not configured'; return; }
+async function checkAlchemyAPI(rpcUrl, status) {
+  if (!rpcUrl) { status.alchemy.error = 'RPC URL not configured'; return; }
   try {
-    const res = await fetch(`https://eth-sepolia.g.alchemy.com/nft/v2/${apiKey}/getNFTs?owner=0x0000000000000000000000000000000000000000`);
-    if (res.ok) { status.alchemy.available = true; console.log('✅ [STATUS] Alchemy API pieejams'); }
-    else { status.alchemy.error = `HTTP ${res.status}`; console.warn(`⚠️ [STATUS] Alchemy API: ${res.status}`); }
-  } catch (err) { status.alchemy.error = err.message; console.error(`❌ [STATUS] Alchemy API: ${err.message}`); }
+    await (new ethers.JsonRpcProvider(rpcUrl)).getBlockNumber();
+    status.alchemy.available = true;
+    console.log('✅ [STATUS] Alchemy API pieejams');
+  } catch (err) {
+    status.alchemy.error = err.message;
+    console.error(`❌ [STATUS] Alchemy API: ${err.message}`);
+  }
 }
 
 async function checkMoralisAPI(apiKey, status) {
@@ -37,7 +40,7 @@ export async function onRequestGet(context) {
   };
 
   await Promise.all([
-    checkAlchemyAPI(env.ALCHEMY_API_KEY, status),
+    checkAlchemyAPI(env.ALCHEMY_RPC_URL, status),
     checkMoralisAPI(env.MORALIS_API_KEY, status),
     checkAlchemyRPC(env.ALCHEMY_RPC_URL, status)
   ]);
