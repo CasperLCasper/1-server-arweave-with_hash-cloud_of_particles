@@ -13,21 +13,42 @@ const WALLET_NFT_ABI = [
 
 const CHAIN_ID = 84532;
 
+let alchemyDisabledUntil = 0;
+const MAX_FAILS = 6;
+let alchemyFailCount = 0;
+
 async function getProvider(env) {
-  if (env.ALCHEMY_RPC_URL) {
-    try {
-      const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL, null, { staticNetwork: true });
-      await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
-      return p;
-    } catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
+  const originalError = console.error;
+  console.error = () => {};
+
+  try {
+    if (Date.now() >= alchemyDisabledUntil && env.ALCHEMY_RPC_URL) {
+      try {
+        const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL, null, { staticNetwork: true });
+        await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
+        alchemyFailCount = 0;
+        return p;
+      } catch (e) {
+        alchemyFailCount++;
+        console.warn(`Alchemy RPC failed (${alchemyFailCount}/${MAX_FAILS})`);
+        if (alchemyFailCount >= MAX_FAILS) {
+          alchemyDisabledUntil = Date.now() + 60 * 60 * 1000;
+          console.warn('Alchemy RPC disabled for 1 hour');
+        }
+      }
+    }
+
+    if (env.MORALIS_RPC_URL) {
+      try {
+        const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL, null, { staticNetwork: true });
+        await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
+        return p;
+      } catch (e) { console.warn('Moralis RPC also failed'); }
+    }
+  } finally {
+    console.error = originalError;
   }
-  if (env.MORALIS_RPC_URL) {
-    try {
-      const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL, null, { staticNetwork: true });
-      await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
-      return p;
-    } catch (e) { console.warn('Moralis RPC also failed'); }
-  }
+
   return null;
 }
 
