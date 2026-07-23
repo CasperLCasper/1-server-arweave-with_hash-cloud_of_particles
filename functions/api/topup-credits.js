@@ -2,6 +2,22 @@
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import { ethers } from 'ethers';
 
+const RPC_URL = 'https://sepolia.base.org';
+
+async function testRPC(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+      signal: controller.signal
+    });
+    return res.ok;
+  } catch { return false; }
+  finally { clearTimeout(timeoutId); }
+}
+
 export async function onRequestGet(context) {
   const { env } = context;
 
@@ -13,7 +29,13 @@ export async function onRequestGet(context) {
       });
     }
 
-    const provider = new ethers.JsonRpcProvider('https://sepolia.base.org', null, { staticNetwork: true });
+    if (!(await testRPC(RPC_URL))) {
+      return new Response(JSON.stringify({ error: 'RPC unavailable' }), {
+        status: 503, headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const provider = new ethers.JsonRpcProvider(RPC_URL, null, { staticNetwork: true });
     const wallet = new ethers.Wallet(privateKey, provider);
     const address = await wallet.getAddress();
 
