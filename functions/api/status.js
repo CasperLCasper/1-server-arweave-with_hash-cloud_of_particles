@@ -23,9 +23,13 @@ async function checkMoralisAPI(apiKey, status) {
 async function checkRPC(rpcUrl, label, statusObj) {
   if (!rpcUrl) { statusObj.error = 'RPC URL not configured'; return; }
   try {
-    await (new ethers.JsonRpcProvider(rpcUrl)).getBlockNumber();
+    const p = new ethers.JsonRpcProvider(rpcUrl);
+    await Promise.race([
+      p.getBlockNumber(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+    ]);
     statusObj.available = true; console.log(`✅ [STATUS] ${label} pieejams`);
-  } catch (err) { statusObj.error = err.message; console.error(`❌ [STATUS] ${label}: ${err.message}`); }
+  } catch (err) { statusObj.error = err.message; console.warn(`⚠️ [STATUS] ${label}: ${err.message}`); }
 }
 
 export async function onRequestGet(context) {
