@@ -13,42 +13,30 @@ const WALLET_NFT_ABI = [
 
 const CHAIN_ID = 84532;
 
-let alchemyDisabledUntil = 0;
-const MAX_FAILS = 6;
-let alchemyFailCount = 0;
+async function testRPC(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+      signal: controller.signal
+    });
+    return res.ok;
+  } catch { return false; }
+  finally { clearTimeout(timeoutId); }
+}
 
 async function getProvider(env) {
-  const originalError = console.error;
-  console.error = () => {};
-
-  try {
-    if (Date.now() >= alchemyDisabledUntil && env.ALCHEMY_RPC_URL) {
-      try {
-        const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL, null, { staticNetwork: true });
-        await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
-        alchemyFailCount = 0;
-        return p;
-      } catch (e) {
-        alchemyFailCount++;
-        console.warn(`Alchemy RPC failed (${alchemyFailCount}/${MAX_FAILS})`);
-        if (alchemyFailCount >= MAX_FAILS) {
-          alchemyDisabledUntil = Date.now() + 60 * 60 * 1000;
-          console.warn('Alchemy RPC disabled for 1 hour');
-        }
-      }
-    }
-
-    if (env.MORALIS_RPC_URL) {
-      try {
-        const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL, null, { staticNetwork: true });
-        await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
-        return p;
-      } catch (e) { console.warn('Moralis RPC also failed'); }
-    }
-  } finally {
-    console.error = originalError;
+  if (env.ALCHEMY_RPC_URL && await testRPC(env.ALCHEMY_RPC_URL)) {
+    console.log('✅ Using Alchemy RPC');
+    return new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL, null, { staticNetwork: true });
   }
-
+  if (env.MORALIS_RPC_URL && await testRPC(env.MORALIS_RPC_URL)) {
+    console.log('✅ Using Moralis RPC');
+    return new ethers.JsonRpcProvider(env.MORALIS_RPC_URL, null, { staticNetwork: true });
+  }
+  console.warn('⚠️ No RPC available');
   return null;
 }
 
