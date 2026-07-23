@@ -15,7 +15,6 @@ export async function onRequestGet(context) {
 
     const signer = new EthereumSigner(privateKey);
     
-    // Konfigurējam Turbo ar jaunajiem testnet URL
     const turbo = TurboFactory.authenticated({
       signer,
       token: 'base-eth',
@@ -24,18 +23,15 @@ export async function onRequestGet(context) {
       uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
     });
 
-    // Iegūstam bilanci drošā veidā
     const balance = await turbo.getBalance();
     const creditsRaw = balance.winston || balance.winc || "0";
     const creditsBigInt = BigInt(creditsRaw);
     
-    // Pieslēdzamies Base Sepolia RPC, lai pārbaudītu paša ETH bilanci gāzei
-    const provider = new ethers.JsonRpcProvider('https://sepolia.base.org');
+    const provider = new ethers.JsonRpcProvider('https://sepolia.base.org', null, { staticNetwork: true });
     const wallet = new ethers.Wallet(privateKey, provider);
     const address = await wallet.getAddress();
     const ethBalance = await provider.getBalance(address);
 
-    // Aprēķinām aptuvenās izmaksas 1MB augšupielādei
     let estimatedMB = 0;
     try {
       const [costFor1MB] = await turbo.getUploadCosts({ bytes: [1024 * 1024] });
