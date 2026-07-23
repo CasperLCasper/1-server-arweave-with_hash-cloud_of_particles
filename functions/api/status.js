@@ -20,16 +20,29 @@ async function checkMoralisAPI(apiKey, status) {
   } catch (err) { status.moralis.error = err.message; console.error(`❌ [STATUS] Moralis API: ${err.message}`); }
 }
 
+async function testRPC(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
+      signal: controller.signal
+    });
+    return res.ok;
+  } catch { return false; }
+  finally { clearTimeout(timeoutId); }
+}
+
 async function checkRPC(rpcUrl, label, statusObj) {
   if (!rpcUrl) { statusObj.error = 'RPC URL not configured'; return; }
-  const originalError = console.error;
-  console.error = () => {};
-  try {
-    const p = new ethers.JsonRpcProvider(rpcUrl, null, { staticNetwork: true });
-    await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
-    statusObj.available = true; console.log(`✅ [STATUS] ${label} pieejams`);
-  } catch (err) { statusObj.error = err.message; console.warn(`⚠️ [STATUS] ${label}: ${err.message}`); }
-  finally { console.error = originalError; }
+  if (await testRPC(rpcUrl)) {
+    statusObj.available = true;
+    console.log(`✅ [STATUS] ${label} pieejams`);
+  } else {
+    statusObj.error = 'timeout';
+    console.warn(`⚠️ [STATUS] ${label}: timeout`);
+  }
 }
 
 export async function onRequestGet(context) {
