@@ -4,6 +4,20 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { startCleanupCron } from './cron-runner.js';
 
+// 🔇 Apklusina JsonRpcProvider failed - rāda tikai vienu reizi
+const originalError = console.error;
+let rpcErrorShown = false;
+console.error = function(...args) {
+  if (args[0] && typeof args[0] === 'string' && args[0].includes('JsonRpcProvider failed to detect network')) {
+    if (!rpcErrorShown) {
+      rpcErrorShown = true;
+      originalError.apply(console, args);
+    }
+    return;
+  }
+  originalError.apply(console, args);
+};
+
 if (!globalThis.File) {
     const { File, Blob } = await import('node:buffer');
     globalThis.File = File;
