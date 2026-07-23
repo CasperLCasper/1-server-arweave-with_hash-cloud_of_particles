@@ -4,18 +4,6 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { startCleanupCron } from './cron-runner.js';
 
-// 🔇 Pilnībā apklusina JsonRpcProvider failed
-const originalError = console.error;
-const originalWarn = console.warn;
-console.error = function(...args) {
-  if (args[0] && typeof args[0] === 'string' && args[0].includes('JsonRpcProvider')) return;
-  originalError.apply(console, args);
-};
-console.warn = function(...args) {
-  if (args[0] && typeof args[0] === 'string' && args[0].includes('JsonRpcProvider')) return;
-  originalWarn.apply(console, args);
-};
-
 if (!globalThis.File) {
     const { File, Blob } = await import('node:buffer');
     globalThis.File = File;
