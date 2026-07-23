@@ -14,21 +14,15 @@ const WALLET_NFT_ABI = [
 async function getProvider(env) {
   if (env.ALCHEMY_RPC_URL) {
     try {
-      const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL);
-      await Promise.race([
-        p.getBlockNumber(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-      ]);
+      const p = new ethers.JsonRpcProvider(env.ALCHEMY_RPC_URL, null, { staticNetwork: true });
+      await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
       return p;
     } catch (e) { console.warn('Alchemy RPC failed, trying Moralis...'); }
   }
   if (env.MORALIS_RPC_URL) {
     try {
-      const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL);
-      await Promise.race([
-        p.getBlockNumber(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-      ]);
+      const p = new ethers.JsonRpcProvider(env.MORALIS_RPC_URL, null, { staticNetwork: true });
+      await Promise.race([p.getBlockNumber(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))]);
       return p;
     } catch (e) { console.warn('Moralis RPC also failed'); }
   }
