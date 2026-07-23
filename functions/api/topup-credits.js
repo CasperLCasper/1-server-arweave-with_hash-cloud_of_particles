@@ -13,15 +13,14 @@ export async function onRequestGet(context) {
       });
     }
 
-    const provider = new ethers.JsonRpcProvider('https://sepolia.base.org');
+    const provider = new ethers.JsonRpcProvider('https://sepolia.base.org', null, { staticNetwork: true });
     const wallet = new ethers.Wallet(privateKey, provider);
     const address = await wallet.getAddress();
 
     const ethBalance = await provider.getBalance(address);
     console.log('💰 ETH bilance:', ethers.formatEther(ethBalance), 'ETH');
 
-    // Fiksēta summa: 0.01 ETH
-    const topUpAmountEth = 0.01; // ✅ Number, nevis string
+    const topUpAmountEth = 0.01;
     const topUpAmountWei = ethers.parseEther(String(topUpAmountEth));
 
     if (ethBalance < topUpAmountWei) {
@@ -46,7 +45,7 @@ export async function onRequestGet(context) {
     const { winc: balanceBefore } = await turbo.getBalance();
     console.log('📊 Kredīti pirms:', balanceBefore.toString(), 'Winston Credits');
 
-    await turbo.topUpWithTokens({ tokenAmount: topUpAmountEth }); // ✅ Number ETH
+    await turbo.topUpWithTokens({ tokenAmount: topUpAmountEth });
     const { winc: balanceAfter } = await turbo.getBalance();
     console.log('📊 Kredīti pēc:', balanceAfter.toString(), 'Winston Credits');
 
