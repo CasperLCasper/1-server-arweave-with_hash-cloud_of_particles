@@ -22,10 +22,11 @@ const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
     polygonAmoy: 'amoy',
+    bscTestnet: 'bsc',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
-    avalancheFuji: 'fuji'
+    avalancheFuji: '0xa869'
   };
   return chains[chain] || 'sepolia';
 };
