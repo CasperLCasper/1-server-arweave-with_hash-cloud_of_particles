@@ -101,6 +101,8 @@ async function switchToBaseAndReauth(app) {
   app.signer = await app.provider.getSigner();
   app.account = await app.signer.getAddress();
   
+  UI.accountDisplay.textContent = `Connected account: ${app.account}`;
+  
   if (!(await login(app.signer, app.account))) {
     showToast('🔐 Authentication failed. Please reconnect your wallet.', 'error');
     return false;
@@ -232,6 +234,7 @@ async function restoreAfterMint(app) {
   app.provider = new ethers.BrowserProvider(window.ethereum);
   app.signer = await app.provider.getSigner();
   app.account = await app.signer.getAddress();
+  UI.accountDisplay.textContent = `Connected account: ${app.account}`;
   await app.renderSnapshot(app.currentVizChain);
 }
 
@@ -257,8 +260,6 @@ const App = Object.assign({}, AppState, {
     if (this.ctx) { this.ctx.clearRect(0, 0, UI.canvas.width, UI.canvas.height); this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height); }
     this.tokens = []; this.ethBalance = 0; this.txCount = 0;
     this.particles = []; this.initialParticles = []; this.nftCenters = []; this.particleCache.clear();
-    this.account = null; this.provider = null; this.signer = null;
-    if (UI.accountDisplay) UI.accountDisplay.textContent = 'Connected account: —';
     if (UI.recordTimer) UI.recordTimer.textContent = 'Recording: 0 / 15 s';
     if (UI.statusMsg) UI.statusMsg.textContent = '';
     if (UI.tokenListContainer) UI.tokenListContainer.style.display = 'none';
