@@ -15,7 +15,7 @@ const getChainConfig = (chain) => {
     baseSepolia: { type: 'alchemy', network: 'base-sepolia' },
     avalancheFuji: { type: 'alchemy', network: 'avalanche-fuji' }
   };
-  return configs[chain] || configs.sepolia;
+  return configs[chain] || null;
 };
 
 const getMoralisChain = (chain) => {
@@ -196,6 +196,11 @@ export async function onRequestGet(context) {
     const contract = url.searchParams.get("contract");
     chain = url.searchParams.get("chain") || 'sepolia';
 
+    const chainConfig = getChainConfig(chain);
+    if (!chainConfig) {
+      return jsonResponse({ error: `Unsupported chain: ${chain}` }, 400);
+    }
+
     const user = await getOptionalUser(request, env);
     const { account, error: accountError } = getAccount(user, accountParam);
     if (accountError) return jsonResponse({ error: accountError }, 400);
@@ -221,7 +226,6 @@ export async function onRequestGet(context) {
     const cached = await getCache(cacheKey, env);
     if (cached) return jsonResponse(cached);
 
-    const chainConfig = getChainConfig(chain);
     let formattedNFTs = [];
 
     if (chainConfig.type === 'bscscan') {
