@@ -5,12 +5,10 @@ import { checkRateLimit } from "../_lib/rateLimit.js";
 
 const MAX_PAGES = 5;
 
-// Chain konfigurācija
 const getChainConfig = (chain) => {
   const configs = {
     sepolia: { type: 'alchemy', network: 'eth-sepolia' },
     polygonAmoy: { type: 'alchemy', network: 'polygon-amoy' },
-    mumbai: { type: 'alchemy', network: 'polygon-amoy' },
     bscTestnet: { type: 'bscscan', network: 'bsc-testnet' },
     arbitrumSepolia: { type: 'alchemy', network: 'arb-sepolia' },
     optimismSepolia: { type: 'alchemy', network: 'opt-sepolia' },
@@ -20,12 +18,10 @@ const getChainConfig = (chain) => {
   return configs[chain] || configs.sepolia;
 };
 
-// Palīgfunkcija Moralis tīklu ID salāgošanai
 const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
     polygonAmoy: 'amoy',
-    mumbai: 'amoy',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
@@ -41,7 +37,6 @@ const getAlchemyNFTUrl = ({ apiKey, network, owner, contract, pageKey }) => {
   return url;
 };
 
-// Moralis NFT API izsaukums caur parastu fetch (Fallback gadījumam)
 async function fetchMoralisNFTs(API_KEY, chain, owner, contract) {
   const moralisChain = getMoralisChain(chain);
   let url = `https://deep-index.moralis.io/api/v2.2/${owner}/nft?chain=${moralisChain}&format=decimal`;
@@ -75,7 +70,6 @@ async function fetchMoralisNFTs(API_KEY, chain, owner, contract) {
   }));
 }
 
-// Droša hibrīda funkcija NFT iegūšanai (Alchemy + Moralis)
 async function fetchNFTsWithFallback(env, chain, chainConfig, safeAccount, safeContract) {
   try {
     const allNFTs = [];
