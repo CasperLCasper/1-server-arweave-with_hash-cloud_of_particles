@@ -238,6 +238,22 @@ async function restoreAfterMint(app) {
   await app.renderSnapshot(app.currentVizChain);
 }
 
+function disableAllButtons() {
+  if (UI.recordBtn) UI.recordBtn.disabled = true;
+  if (UI.renderBtn) UI.renderBtn.disabled = true;
+  if (UI.connectBtn) UI.connectBtn.disabled = true;
+  if (UI.chainSelect) UI.chainSelect.disabled = true;
+  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = true;
+}
+
+function enableAllButtons() {
+  if (UI.recordBtn) UI.recordBtn.disabled = false;
+  if (UI.renderBtn) UI.renderBtn.disabled = false;
+  if (UI.connectBtn) UI.connectBtn.disabled = false;
+  if (UI.chainSelect) UI.chainSelect.disabled = false;
+  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = false;
+}
+
 // ============================================
 // GALVENĀ APLIKĀCIJA
 // ============================================
@@ -292,6 +308,7 @@ const App = Object.assign({}, AppState, {
     if (MAINTENANCE_CONFIG.isMaintenance) { showToast('🛠️ Minting is disabled during maintenance.', 'warning'); return; }
     if (!this.account || !this.provider || !this.signer) { showToast('🔌 Please connect your wallet first', 'warning'); return; }
 
+    disableAllButtons();
     setButtonLoading(UI.generateNFTBtn, true);
     showWarning('⚠️ Do not close this tab until minting is complete and you have saved the ZIP file with your NFT files!', true);
 
@@ -319,7 +336,6 @@ const App = Object.assign({}, AppState, {
       const tempHash = ethers.keccak256(ethers.concat([ethers.toUtf8Bytes('WalletVisualizer'), imageHash, videoHash, ethers.toUtf8Bytes(this.account)]));
 
       if (!(await switchToBaseAndReauth(this))) {
-        setButtonLoading(UI.generateNFTBtn, false);
         await restoreAfterMint(this);
         return;
       }
@@ -359,6 +375,7 @@ const App = Object.assign({}, AppState, {
     } finally {
       this.showInfo = prevShowInfo;
       setButtonLoading(UI.generateNFTBtn, false);
+      enableAllButtons();
     }
   },
 
