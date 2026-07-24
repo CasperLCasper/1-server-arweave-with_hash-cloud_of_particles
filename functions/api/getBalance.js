@@ -4,12 +4,13 @@ const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
     polygonAmoy: 'amoy',
+    bscTestnet: 'bsc',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
     avalancheFuji: 'fuji'
   };
-  return chains[chain] || 'sepolia';
+  return chains[chain] || null;
 };
 
 async function fetchBalanceAlchemy(account, network, apiKey) {
@@ -26,6 +27,7 @@ async function fetchBalanceAlchemy(account, network, apiKey) {
 
 async function fetchBalanceMoralis(account, chain) {
   const moralisChain = getMoralisChain(chain);
+  if (!moralisChain) throw new Error(`Unsupported chain: ${chain}`);
   const res = await fetch(`https://deep-index.moralis.io/api/v2.2/${account}/balance?chain=${moralisChain}`, {
     headers: { 'accept': 'application/json', 'X-API-Key': process.env.MORALIS_API_KEY }
   });
@@ -51,8 +53,8 @@ export async function onRequestGet(context) {
     } catch {
       try {
         balance = await fetchBalanceMoralis(account, chain);
-      } catch {
-        return new Response(JSON.stringify({ error: "Failed to fetch balance" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message || "Failed to fetch balance" }), { status: 500, headers: { "Content-Type": "application/json" } });
       }
     }
     
