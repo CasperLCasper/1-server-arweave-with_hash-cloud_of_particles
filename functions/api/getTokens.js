@@ -1,3 +1,7 @@
+// ============================================ //
+// getTokens.js - IZLABOTS
+// ============================================ //
+
 import { ethers } from "ethers";
 import { getOptionalUser } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
@@ -16,9 +20,9 @@ const getChainConfig = (chain, apiKey) => {
       method: 'alchemy_getTokenBalances'
     },
     bscTestnet: {
-      type: 'bscscan',
-      url: `https://api-testnet.bscscan.com/api`,
-      method: 'bscscan'
+      type: 'alchemy',
+      url: `https://bnb-testnet.g.alchemy.com/v2/${apiKey}`,
+      method: 'alchemy_getTokenBalances'
     },
     arbitrumSepolia: {
       type: 'alchemy',
@@ -37,7 +41,7 @@ const getChainConfig = (chain, apiKey) => {
     },
     avalancheFuji: {
       type: 'alchemy',
-      url: `https://avalanche-fuji.g.alchemy.com/v2/${apiKey}`,
+      url: `https://avax-fuji.g.alchemy.com/v2/${apiKey}`,
       method: 'alchemy_getTokenBalances'
     }
   };
@@ -51,7 +55,7 @@ const getMoralisChain = (chain) => {
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
-    avalancheFuji: 'fuji'
+    avalancheFuji: 'avalanche testnet'
   };
   return chains[chain] || 'sepolia';
 };
