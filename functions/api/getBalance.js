@@ -1,14 +1,18 @@
+// ============================================ //
+// getBalance.js - IZLABOTS
+// ============================================ //
+
 import { ethers } from "ethers";
 
 const getAlchemyNetwork = (chain) => {
   const networks = {
     sepolia: 'eth-sepolia',
     polygonAmoy: 'polygon-amoy',
-    bscTestnet: 'bsc-testnet',
+    bscTestnet: 'bnb-testnet',
     arbitrumSepolia: 'arb-sepolia',
     optimismSepolia: 'opt-sepolia',
     baseSepolia: 'base-sepolia',
-    avalancheFuji: 'avalanche-fuji'
+    avalancheFuji: 'avax-fuji'
   };
   return networks[chain] || 'eth-sepolia';
 };
@@ -21,7 +25,7 @@ const getMoralisChain = (chain) => {
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
-    avalancheFuji: 'fuji'
+    avalancheFuji: 'avalanche testnet'
   };
   return chains[chain] || null;
 };
