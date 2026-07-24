@@ -2,6 +2,22 @@
 // CHAIN CONFIGURATIONS
 // ============================================ //
 
+// 🔥 Deep freeze helper - prevents mutation of nested objects (ar circular ref protection)
+function deepFreeze(obj, seen = new WeakSet()) {
+  if (!obj || typeof obj !== 'object' || seen.has(obj)) {
+    return obj;
+  }
+  
+  seen.add(obj);
+  Object.freeze(obj);
+  
+  Object.values(obj).forEach(value => {
+    deepFreeze(value, seen);
+  });
+  
+  return obj;
+}
+
 const baseSepoliaConfig = {
   name: 'Base Sepolia',
   chainId: 84532,
@@ -28,13 +44,13 @@ export const VIZ_CHAINS = {
     blockExplorer: 'https://sepolia.etherscan.io',
     alchemyNetwork: 'eth-sepolia'
   },
-  polygonAmoy: {
+  polygonAmoy: { // 🔥 PILNĪBĀ ATJAUNINĀTS: Izravēts vecais 'mumbai'
     name: 'Polygon Amoy Testnet',
     chainId: 80002,
-    chainIdHex: '0x13882',
+    chainIdHex: '0x1388a',
     rpc: [
-      'https://polygon-amoy-bor-rpc.publicnode.com',
-      'https://rpc-amoy.polygon.technology'
+      'https://rpc-amoy.polygon.technology',
+      'https://polygon-amoy-bor-rpc.publicnode.com'
     ],
     nativeCurrency: 'POL',
     blockExplorer: 'https://amoy.polygonscan.com',
@@ -45,8 +61,8 @@ export const VIZ_CHAINS = {
     chainId: 97,
     chainIdHex: '0x61',
     rpc: [
-      'https://bsc-testnet-rpc.publicnode.com',
-      'https://data-seed-prebsc-1-s1.binance.org:8545'
+      'https://data-seed-prebsc-1-s1.binance.org:8545',
+      'https://bsc-testnet-rpc.publicnode.com'
     ],
     nativeCurrency: 'tBNB',
     blockExplorer: 'https://testnet.bscscan.com'
@@ -90,20 +106,28 @@ export const VIZ_CHAINS = {
   }
 };
 
+// 🔥 MINT_CHAIN izmanto to pašu config (nav duplikācijas)
 export const MINT_CHAIN = VIZ_CHAINS.baseSepolia;
 
+// 🔥 Deep freeze for production safety - prevents mutation of nested objects
+deepFreeze(VIZ_CHAINS);
+deepFreeze(MINT_CHAIN);
+
+// Helper function to get RPC URL (returns first available)
 export function getRpcUrl(chainKey) {
   const chain = VIZ_CHAINS[chainKey];
   if (!chain) return null;
   return Array.isArray(chain.rpc) ? chain.rpc[0] : chain.rpc;
 }
 
+// 🔥 Helper function to get all RPC URLs - returns immutable copy
 export function getAllRpcUrls(chainKey) {
   const chain = VIZ_CHAINS[chainKey];
   if (!chain) return [];
   return Array.isArray(chain.rpc) ? [...chain.rpc] : [chain.rpc];
 }
 
+// 🔥 Helper to get chain config by hex chainId - returns immutable copy with new rpc array
 export function getChainByHexId(hexId) {
   for (const [key, chain] of Object.entries(VIZ_CHAINS)) {
     if (chain.chainIdHex === hexId) {
@@ -117,6 +141,7 @@ export function getChainByHexId(hexId) {
   return null;
 }
 
+// 🔥 Helper to get chain config by numeric chainId - returns immutable copy with new rpc array
 export function getChainById(chainId) {
   for (const [key, chain] of Object.entries(VIZ_CHAINS)) {
     if (chain.chainId === chainId) {
