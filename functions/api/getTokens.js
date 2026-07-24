@@ -15,11 +15,6 @@ const getChainConfig = (chain, apiKey) => {
       url: `https://polygon-amoy.g.alchemy.com/v2/${apiKey}`,
       method: 'alchemy_getTokenBalances'
     },
-    mumbai: {
-      type: 'alchemy',
-      url: `https://polygon-amoy.g.alchemy.com/v2/${apiKey}`,
-      method: 'alchemy_getTokenBalances'
-    },
     bscTestnet: {
       type: 'bscscan',
       url: `https://api-testnet.bscscan.com/api`,
@@ -53,7 +48,6 @@ const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
     polygonAmoy: 'amoy',
-    mumbai: 'amoy',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
