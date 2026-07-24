@@ -9,7 +9,8 @@ const MAX_PAGES = 5;
 const getChainConfig = (chain) => {
   const configs = {
     sepolia: { type: 'alchemy', network: 'eth-sepolia' },
-    mumbai: { type: 'alchemy', network: 'polygon-amoy' }, // Aizmugurē Amoy, bet saglabājam savietojamību
+    polygonAmoy: { type: 'alchemy', network: 'polygon-amoy' },
+    mumbai: { type: 'alchemy', network: 'polygon-amoy' },
     bscTestnet: { type: 'bscscan', network: 'bsc-testnet' },
     arbitrumSepolia: { type: 'alchemy', network: 'arb-sepolia' },
     optimismSepolia: { type: 'alchemy', network: 'opt-sepolia' },
@@ -23,6 +24,7 @@ const getChainConfig = (chain) => {
 const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
+    polygonAmoy: 'amoy',
     mumbai: 'amoy',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
@@ -62,7 +64,6 @@ async function fetchMoralisNFTs(API_KEY, chain, owner, contract) {
 
   const data = await response.json();
   
-  // Pārveidojam Moralis objektus, lai tie precīzi atbilstu formatNFTs funkcijai
   return (data.result || []).map(nft => ({
     contract: {
       address: nft.token_address,
@@ -108,7 +109,6 @@ async function fetchNFTsWithFallback(env, chain, chainConfig, safeAccount, safeC
     console.warn("Alchemy NFT API pārslogots vai pievīla. Slēdzamies pie Moralis...", alchemyError.message);
     
     try {
-      // Izsaucam Moralis kā rezerves variantu
       const moralisNFTs = await fetchMoralisNFTs(
         env.MORALIS_API_KEY, 
         chain, 
@@ -145,7 +145,6 @@ const getBSCScanNFTs = async (owner, apiKey) => {
   return Array.from(uniqueNFTs.values());
 };
 
-// JSON Response palīgfunkcija
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -153,7 +152,6 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-// Validācijas funkcijas
 function getAccount(user, accountParam) {
   const account = accountParam || (user?.address || null);
   if (!account) {
@@ -170,7 +168,6 @@ function validateEthereumAddress(address) {
   }
 }
 
-// Rate limiting ar atslēgu
 async function checkRateLimitForKey(request, user, chain, env) {
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const rateKey = user ? `user_${user.address}_nfts_${chain}` : `ip_${ip}_nfts_${chain}`;
@@ -181,7 +178,6 @@ async function checkRateLimitForKey(request, user, chain, env) {
   return true;
 }
 
-// Vienota formatēšanas funkcija EVM datiem (Alchemy un Moralis hibrīdam)
 function formatNFTs(nfts, chain) {
   return nfts.map(nft => ({
     contract: {
@@ -206,12 +202,10 @@ export async function onRequestGet(context) {
     const contract = url.searchParams.get("contract");
     chain = url.searchParams.get("chain") || 'sepolia';
 
-    // Autentifikācija un konta iegūšana
     const user = await getOptionalUser(request, env);
     const { account, error: accountError } = getAccount(user, accountParam);
     if (accountError) return jsonResponse({ error: accountError }, 400);
 
-    // Adrešu validācija
     const { address: safeAccount, error: addrError } = validateEthereumAddress(account);
     if (addrError) return jsonResponse({ error: addrError }, 400);
 
@@ -222,12 +216,10 @@ export async function onRequestGet(context) {
       safeContract = validatedContract;
     }
 
-    // Rate limiting
     if (!(await checkRateLimitForKey(request, user, chain, env))) {
       return jsonResponse({ error: "Too many requests" }, 429);
     }
 
-    // Cache pārbaude
     const cacheKey = safeContract
       ? `nfts_${safeAccount}_${safeContract}_${chain}`
       : `nfts_${safeAccount}_${chain}`;
@@ -235,21 +227,17 @@ export async function onRequestGet(context) {
     const cached = await getCache(cacheKey, env);
     if (cached) return jsonResponse(cached);
 
-    // NFT iegūšana un apstrāde
     const chainConfig = getChainConfig(chain);
     let formattedNFTs = [];
 
     if (chainConfig.type === 'bscscan') {
       const bscNFTs = await getBSCScanNFTs(safeAccount, env.BSCSCAN_API_KEY);
-      // BSCScan dati jau ir gatavā gala struktūrā, pieliekam tikai chain mainīgo
       formattedNFTs = bscNFTs.map(nft => ({ ...nft, chain }));
     } else {
-      // Izpildām jauno hibrīda pieprasījumu ar Moralis aizsardzību
       const rawNFTs = await fetchNFTsWithFallback(env, chain, chainConfig, safeAccount, safeContract);
       formattedNFTs = formatNFTs(rawNFTs, chain);
     }
 
-    // Rezultātu apkopošana un kešošana
     const result = { result: { nfts: formattedNFTs }, chain };
     
     await setCache(cacheKey, result, env);
@@ -257,7 +245,6 @@ export async function onRequestGet(context) {
 
   } catch (err) {
     console.error("NFT ERROR for chain:", chain, err);
-    // Ja abi servisi ir nokrituši, atgriežam 500 kļūdu, bet NEsaglabājam tukšu rezultātu kešatmiņā
     return jsonResponse({
       error: "Failed to fetch NFTs from all available providers",
       result: { nfts: [] }
