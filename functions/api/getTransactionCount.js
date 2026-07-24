@@ -1,3 +1,16 @@
+const getAlchemyNetwork = (chain) => {
+  const networks = {
+    sepolia: 'eth-sepolia',
+    polygonAmoy: 'polygon-amoy',
+    bscTestnet: 'bsc-testnet',
+    arbitrumSepolia: 'arb-sepolia',
+    optimismSepolia: 'opt-sepolia',
+    baseSepolia: 'base-sepolia',
+    avalancheFuji: 'avalanche-fuji'
+  };
+  return networks[chain] || 'eth-sepolia';
+};
+
 const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
@@ -46,8 +59,9 @@ export async function onRequestGet(context) {
 
   try {
     let txCount;
+    const alchemyNetwork = getAlchemyNetwork(chain);
     try {
-      txCount = await fetchTxCountAlchemy(account, 'eth-sepolia', env.ALCHEMY_API_KEY);
+      txCount = await fetchTxCountAlchemy(account, alchemyNetwork, env.ALCHEMY_API_KEY);
     } catch {
       try {
         txCount = await fetchTxCountMoralis(account, chain);
