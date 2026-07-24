@@ -48,10 +48,11 @@ export const VIZ_CHAINS = {
     chainId: 80002,
     chainIdHex: '0x13882',
     rpc: [
+      'https://polygon-amoy.drpc.org',
       'https://rpc-amoy.polygon.technology',
       'https://polygon-amoy-bor-rpc.publicnode.com'
     ],
-    nativeCurrency: 'MATIC',
+    nativeCurrency: 'POL',
     blockExplorer: 'https://amoy.polygonscan.com',
     alchemyNetwork: 'polygon-amoy'
   },
