@@ -2,21 +2,6 @@
 // CHAIN CONFIGURATIONS
 // ============================================ //
 
-function deepFreeze(obj, seen = new WeakSet()) {
-  if (!obj || typeof obj !== 'object' || seen.has(obj)) {
-    return obj;
-  }
-  
-  seen.add(obj);
-  Object.freeze(obj);
-  
-  Object.values(obj).forEach(value => {
-    deepFreeze(value, seen);
-  });
-  
-  return obj;
-}
-
 const baseSepoliaConfig = {
   name: 'Base Sepolia',
   chainId: 84532,
@@ -106,9 +91,6 @@ export const VIZ_CHAINS = {
 };
 
 export const MINT_CHAIN = VIZ_CHAINS.baseSepolia;
-
-deepFreeze(VIZ_CHAINS);
-deepFreeze(MINT_CHAIN);
 
 export function getRpcUrl(chainKey) {
   const chain = VIZ_CHAINS[chainKey];
