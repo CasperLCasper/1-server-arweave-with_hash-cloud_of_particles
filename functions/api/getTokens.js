@@ -41,7 +41,7 @@ const getChainConfig = (chain, apiKey) => {
       method: 'alchemy_getTokenBalances'
     }
   };
-  return configs[chain] || configs.sepolia;
+  return configs[chain] || null;
 };
 
 const getMoralisChain = (chain) => {
@@ -134,6 +134,13 @@ export async function onRequestGet(context) {
     const accountParam = url.searchParams.get("account");
     chain = url.searchParams.get("chain") || 'sepolia';
 
+    const chainConfig = getChainConfig(chain, env.ALCHEMY_API_KEY);
+    if (!chainConfig) {
+      return new Response(JSON.stringify({ error: `Unsupported chain: ${chain}` }), {
+        status: 400, headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const user = await getOptionalUser(request, env);
     let account = accountParam || (user ? user.address : null);
 
@@ -173,10 +180,7 @@ export async function onRequestGet(context) {
       });
     }
 
-    const API_KEY = env.ALCHEMY_API_KEY;
     const BSCSCAN_API_KEY = env.BSCSCAN_API_KEY;
-    
-    const chainConfig = getChainConfig(chain, API_KEY);
     
     let tokens = [];
     
