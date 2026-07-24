@@ -8,6 +8,94 @@ import { MAX_PARTICLES, CONNECTION_DISTANCE, VIZ_LOW_POWER_MODE } from './config
 import { getTokens, getAllNFTs } from './api.js';
 import { VIZ_CHAINS } from './chains.js';
 
+function getMoralisChain(chain) {
+  const chains = {
+    sepolia: 'sepolia',
+    polygonAmoy: 'amoy',
+    arbitrumSepolia: 'arbitrum sepolia',
+    optimismSepolia: 'optimism sepolia',
+    baseSepolia: 'base sepolia',
+    avalancheFuji: 'fuji'
+  };
+  return chains[chain] || 'sepolia';
+}
+
+async function fetchNativeBalance(account, chain) {
+  // 1. Alchemy REST API (primārais)
+  try {
+    const alchemyNetwork = VIZ_CHAINS[chain]?.alchemyNetwork || 'eth-sepolia';
+    const apiKey = window.ALCHEMY_API_KEY || '';
+    if (apiKey) {
+      const res = await fetch(`https://${alchemyNetwork}.g.alchemy.com/v2/${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getBalance", params: [account, "latest"], id: 1 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.result) {
+          return Number(ethers.formatEther(data.result)) || 0;
+        }
+      }
+    }
+  } catch (e) { console.warn('Alchemy balance failed, trying Moralis...'); }
+  
+  // 2. Moralis REST API (fallback)
+  try {
+    const moralisChain = getMoralisChain(chain);
+    const apiKey = window.MORALIS_API_KEY || '';
+    if (apiKey) {
+      const res = await fetch(`https://deep-index.moralis.io/api/v2.2/${account}/balance?chain=${moralisChain}`, {
+        headers: { 'accept': 'application/json', 'X-API-Key': apiKey }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return Number(ethers.formatEther(data.balance || '0')) || 0;
+      }
+    }
+  } catch {}
+  
+  return 0;
+}
+
+async function fetchTransactionCount(account, chain) {
+  // 1. Alchemy REST API (primārais)
+  try {
+    const alchemyNetwork = VIZ_CHAINS[chain]?.alchemyNetwork || 'eth-sepolia';
+    const apiKey = window.ALCHEMY_API_KEY || '';
+    if (apiKey) {
+      const res = await fetch(`https://${alchemyNetwork}.g.alchemy.com/v2/${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_getTransactionCount", params: [account, "latest"], id: 1 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.result) {
+          return parseInt(data.result, 16) || 0;
+        }
+      }
+    }
+  } catch (e) { console.warn('Alchemy tx count failed, trying Moralis...'); }
+  
+  // 2. Moralis REST API (fallback)
+  try {
+    const moralisChain = getMoralisChain(chain);
+    const apiKey = window.MORALIS_API_KEY || '';
+    if (apiKey) {
+      const res = await fetch(`https://deep-index.moralis.io/api/v2.2/${account}?chain=${moralisChain}`, {
+        headers: { 'accept': 'application/json', 'X-API-Key': apiKey }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.transaction_count || 0;
+      }
+    }
+  } catch {}
+  
+  return 0;
+}
+
 export function getCanvasDimensions() {
   const isMobile = VIZ_LOW_POWER_MODE;
   return { width: isMobile ? 1080 : 1920, height: isMobile ? 720 : 1080, isMobile };
@@ -194,16 +282,19 @@ export async function renderSnapshot(app, chain) {
   app.tokens = []; app.ethBalance = 0; app.txCount = 0; app.nftCenters = [];
   setButtonLoading(UI.renderBtn, true); stopAnimation(app); cleanup(app); showProgress(); app.particleCache.clear();
   showToast(`Loading ${chain} wallet data...`, 'info');
+  
   const steps = [
-    { name: 'Fetching balance...', func: async () => { app.ethBalance = Number(ethers.formatEther(await app.provider.getBalance(app.account))) || 0; }},
-    { name: 'Transaction count...', func: async () => { app.txCount = Number(await app.provider.getTransactionCount(app.account)) || 0; }},
+    { name: 'Fetching balance...', func: async () => { app.ethBalance = await fetchNativeBalance(app.account, chain); }},
+    { name: 'Transaction count...', func: async () => { app.txCount = await fetchTransactionCount(app.account, chain); }},
     { name: 'ERC-20 tokens...', func: async () => { app.tokens = await getTokens(app.account, chain); }},
     { name: 'NFTs...', func: async () => { const nfts = await getAllNFTs(app.account, chain); app.tokens = [...app.tokens, ...nfts]; updateNFTCenters(app); }},
     { name: 'Creating visualization...', func: async () => { await initParticlesOnce(app); app.particles = cloneParticles(app); }}
   ];
+  
   let current = 0, visual = 0, running = true;
   const anim = () => { if (!running) return; visual += ((current / steps.length) - visual) * 0.05; UI.progressBar.style.transform = `scaleX(${visual})`; requestAnimationFrame(anim); };
   requestAnimationFrame(anim);
+  
   try {
     for (const s of steps) { showToast(s.name, 'info'); await s.func(); current++; }
     if (app.showInfo && UI.tokenListContainer) { UI.tokenListContainer.style.display = 'block'; updateTokenListUI(app.tokens); }
