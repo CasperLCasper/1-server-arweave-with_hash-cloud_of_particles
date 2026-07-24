@@ -25,6 +25,24 @@ import { MAINTENANCE_CONFIG } from './maintenance.js';
 // PALĪGFUNKCIJAS
 // ============================================
 
+function disableAllButtons() {
+  if (UI.recordBtn) UI.recordBtn.disabled = true;
+  if (UI.renderBtn) UI.renderBtn.disabled = true;
+  if (UI.connectBtn) UI.connectBtn.disabled = true;
+  if (UI.chainSelect) UI.chainSelect.disabled = true;
+  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = true;
+  document.querySelectorAll('.theme-btn').forEach(btn => { btn.disabled = true; });
+}
+
+function enableAllButtons() {
+  if (UI.recordBtn) UI.recordBtn.disabled = false;
+  if (UI.renderBtn) UI.renderBtn.disabled = false;
+  if (UI.connectBtn) UI.connectBtn.disabled = false;
+  if (UI.chainSelect) UI.chainSelect.disabled = false;
+  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = false;
+  document.querySelectorAll('.theme-btn').forEach(btn => { btn.disabled = false; });
+}
+
 async function createImageBlob() {
   return new Promise((resolve, reject) => {
     UI.canvas.toBlob((blob) => {
@@ -236,22 +254,6 @@ async function restoreAfterMint(app) {
   app.account = await app.signer.getAddress();
   UI.accountDisplay.textContent = `Connected account: ${app.account}`;
   await app.renderSnapshot(app.currentVizChain);
-}
-
-function disableAllButtons() {
-  if (UI.recordBtn) UI.recordBtn.disabled = true;
-  if (UI.renderBtn) UI.renderBtn.disabled = true;
-  if (UI.connectBtn) UI.connectBtn.disabled = true;
-  if (UI.chainSelect) UI.chainSelect.disabled = true;
-  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = true;
-}
-
-function enableAllButtons() {
-  if (UI.recordBtn) UI.recordBtn.disabled = false;
-  if (UI.renderBtn) UI.renderBtn.disabled = false;
-  if (UI.connectBtn) UI.connectBtn.disabled = false;
-  if (UI.chainSelect) UI.chainSelect.disabled = false;
-  if (UI.generateNFTBtn) UI.generateNFTBtn.disabled = false;
 }
 
 // ============================================
