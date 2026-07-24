@@ -3,12 +3,16 @@ import { getOptionalUser } from "../_lib/auth.js";
 import { checkRateLimit } from "../_lib/rateLimit.js";
 import { getCache, setCache } from "../_lib/cache.js";
 
-// Chain konfigurācija pielāgota, lai API_KEY tiktu nodots dinamiski
 const getChainConfig = (chain, apiKey) => {
   const configs = {
     sepolia: {
       type: 'alchemy',
       url: `https://eth-sepolia.g.alchemy.com/v2/${apiKey}`,
+      method: 'alchemy_getTokenBalances'
+    },
+    polygonAmoy: {
+      type: 'alchemy',
+      url: `https://polygon-amoy.g.alchemy.com/v2/${apiKey}`,
       method: 'alchemy_getTokenBalances'
     },
     mumbai: {
@@ -45,10 +49,10 @@ const getChainConfig = (chain, apiKey) => {
   return configs[chain] || configs.sepolia;
 };
 
-// Palīgfunkcija Moralis tīklu ID salāgošanai
 const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
+    polygonAmoy: 'amoy',
     mumbai: 'amoy',
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
@@ -58,7 +62,6 @@ const getMoralisChain = (chain) => {
   return chains[chain] || 'sepolia';
 };
 
-// Moralis alternatīva ERC-20 tokenu iegūšanai
 async function fetchMoralisTokens(API_KEY, chain, owner) {
   const moralisChain = getMoralisChain(chain);
   const url = `https://deep-index.moralis.io/api/v2.2/${owner}/erc20?chain=${moralisChain}`;
@@ -77,7 +80,6 @@ async function fetchMoralisTokens(API_KEY, chain, owner) {
 
   const data = await response.json();
   
-  // Pārveidojam Moralis atbildi, lai tā precīzi sakristu ar Alchemy datu struktūru
   return (data || []).map(t => ({
     contract: t.token_address,
     balance: t.balance,
@@ -85,10 +87,8 @@ async function fetchMoralisTokens(API_KEY, chain, owner) {
   }));
 }
 
-// Droša hibrīda funkcija, kas sargā pret Alchemy 429 kļūdām
 async function fetchTokensWithFallback(env, chain, chainConfig, safeAccount) {
   try {
-    // 1. Mēģinām Alchemy
     const response = await fetch(chainConfig.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,16 +122,14 @@ async function fetchTokensWithFallback(env, chain, chainConfig, safeAccount) {
     console.warn("Alchemy Token API pārslogots vai pievīla. Slēdzamies pie Moralis...", alchemyError.message);
     
     try {
-      // 2. Ja Alchemy pieviļ, izpildām pieprasījumu caur Moralis
       return await fetchMoralisTokens(env.MORALIS_API_KEY, chain, safeAccount);
     } catch (moralisError) {
       console.error("Kritiskā kļūda: Abi Token servisi (Alchemy un Moralis) ir pievīluši!");
-      throw moralisError; // Metam kļūdu tālāk, lai nekešotu tukšus datus
+      throw moralisError;
     }
   }
 }
 
-// Izmantojam onRequestGet tikai GET pieprasījumiem
 export async function onRequestGet(context) {
   let chain = 'sepolia';
 
@@ -162,7 +160,6 @@ export async function onRequestGet(context) {
       });
     }
 
-    // Rate limiting
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     const key = user ? `user_${user.address}_tokens_${chain}` : `ip_${ip}_tokens_${chain}`;
 
@@ -173,7 +170,6 @@ export async function onRequestGet(context) {
       });
     }
 
-    // Cache pārbaude
     const cacheKey = `tokens_${safeAccount}_${chain}`;
     const cached = await getCache(cacheKey, env);
     if (cached) {
@@ -191,7 +187,6 @@ export async function onRequestGet(context) {
     let tokens = [];
     
     if (chainConfig.type === 'bscscan') {
-      // BSCScan tokenu vēstures skenēšana (darbojas kā drošs un stabils saraksta avots testnetā)
       const txUrl = `https://api-testnet.bscscan.com/api?module=account&action=tokentx&address=${safeAccount}&sort=desc&apikey=${BSCSCAN_API_KEY}`;
       const txResponse = await fetch(txUrl);
       const txData = await txResponse.json();
@@ -204,7 +199,7 @@ export async function onRequestGet(context) {
               contract: tx.contractAddress,
               symbol: tx.tokenSymbol,
               decimals: Number.parseInt(tx.tokenDecimal),
-              balance: tx.value, // Šeit tiek paņemta pēdējā pārvietotā vērtība kā sākumpunkts
+              balance: tx.value,
               decimalBalance: BigInt(tx.value).toString()
             });
           }
@@ -212,13 +207,11 @@ export async function onRequestGet(context) {
         tokens = Array.from(tokenMap.values());
       }
     } else {
-      // Izmantojam jauno drošo hibrīda funkciju EVM tīkliem
       tokens = await fetchTokensWithFallback(env, chain, chainConfig, safeAccount);
     }
 
     const result = { tokens, chain };
 
-    // Saglabājam kešā tikai tad, ja veiksmīgi dabūjām datus
     await setCache(cacheKey, result, env, 60000);
 
     return new Response(JSON.stringify(result), {
