@@ -50,9 +50,9 @@ function findChainConfig(chainIdHex) {
 
 function getAddChainParams(chainConfig) {
   const isAmoy = chainConfig.chainIdHex.toLowerCase() === '0x13882';
-  const currencySymbol = isAmoy ? 'MATIC' : (chainConfig.nativeCurrency || 'ETH');
+  const currencySymbol = isAmoy ? 'POL' : (chainConfig.nativeCurrency || 'ETH');
   const explorerUrl = isAmoy ? 'https://amoy.polygonscan.com/' : chainConfig.blockExplorer;
-  const rpcUrlsArray = isAmoy ? ['https://rpc-amoy.polygon.technology'] : (Array.isArray(chainConfig.rpc) ? chainConfig.rpc : [chainConfig.rpc]);
+  const rpcUrlsArray = isAmoy ? ['https://polygon-amoy.drpc.org'] : (Array.isArray(chainConfig.rpc) ? chainConfig.rpc : [chainConfig.rpc]);
   const chainName = isAmoy ? 'Polygon Amoy Testnet' : chainConfig.name;
   return { chainId: chainConfig.chainIdHex, chainName, nativeCurrency: { name: currencySymbol, symbol: currencySymbol, decimals: 18 }, rpcUrls: rpcUrlsArray, blockExplorerUrls: explorerUrl ? [explorerUrl] : [] };
 }
