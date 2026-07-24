@@ -1,5 +1,18 @@
 import { ethers } from "ethers";
 
+const getAlchemyNetwork = (chain) => {
+  const networks = {
+    sepolia: 'eth-sepolia',
+    polygonAmoy: 'polygon-amoy',
+    bscTestnet: 'bsc-testnet',
+    arbitrumSepolia: 'arb-sepolia',
+    optimismSepolia: 'opt-sepolia',
+    baseSepolia: 'base-sepolia',
+    avalancheFuji: 'avalanche-fuji'
+  };
+  return networks[chain] || 'eth-sepolia';
+};
+
 const getMoralisChain = (chain) => {
   const chains = {
     sepolia: 'sepolia',
@@ -48,8 +61,9 @@ export async function onRequestGet(context) {
 
   try {
     let balance;
+    const alchemyNetwork = getAlchemyNetwork(chain);
     try {
-      balance = await fetchBalanceAlchemy(account, 'eth-sepolia', env.ALCHEMY_API_KEY);
+      balance = await fetchBalanceAlchemy(account, alchemyNetwork, env.ALCHEMY_API_KEY);
     } catch {
       try {
         balance = await fetchBalanceMoralis(account, chain);
