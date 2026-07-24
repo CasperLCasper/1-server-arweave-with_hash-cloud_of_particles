@@ -1,3 +1,7 @@
+// ============================================ //
+// getNFTs.js - IZLABOTS
+// ============================================ //
+
 import { ethers } from "ethers";
 import { getOptionalUser } from "../_lib/auth.js";
 import { getCache, setCache } from "../_lib/cache.js";
@@ -9,11 +13,11 @@ const getChainConfig = (chain) => {
   const configs = {
     sepolia: { type: 'alchemy', network: 'eth-sepolia' },
     polygonAmoy: { type: 'alchemy', network: 'polygon-amoy' },
-    bscTestnet: { type: 'bscscan', network: 'bsc-testnet' },
+    bscTestnet: { type: 'alchemy', network: 'bnb-testnet' },
     arbitrumSepolia: { type: 'alchemy', network: 'arb-sepolia' },
     optimismSepolia: { type: 'alchemy', network: 'opt-sepolia' },
     baseSepolia: { type: 'alchemy', network: 'base-sepolia' },
-    avalancheFuji: { type: 'alchemy', network: 'avalanche-fuji' }
+    avalancheFuji: { type: 'alchemy', network: 'avax-fuji' }
   };
   return configs[chain] || null;
 };
@@ -26,7 +30,7 @@ const getMoralisChain = (chain) => {
     arbitrumSepolia: 'arbitrum sepolia',
     optimismSepolia: 'optimism sepolia',
     baseSepolia: 'base sepolia',
-    avalancheFuji: '0xa869'
+    avalancheFuji: 'avalanche testnet'
   };
   return chains[chain] || 'sepolia';
 };
