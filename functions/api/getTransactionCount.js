@@ -37,7 +37,7 @@ async function fetchTxCountAlchemy(account, network, apiKey) {
   if (!res.ok) throw new Error('Alchemy failed');
   const data = await res.json();
   if (!data.result) throw new Error('No result');
-  return parseInt(data.result, 16);
+  return Number.parseInt(data.result, 16);
 }
 
 async function fetchTxCountMoralis(account, chain) {
