@@ -38,8 +38,13 @@ async function getProvider(env) {
   return null;
 }
 
-export function trackPendingMint(walletAddr) {}
-export function clearPendingTrack(walletAddr) {}
+export function trackPendingMint(walletAddr) {
+  // Saglabāts atpakaļsaderībai — vairs netiek izmantots cleanup loģikā
+}
+
+export function clearPendingTrack(walletAddr) {
+  // Saglabāts atpakaļsaderībai
+}
 
 export async function executePendingCleanup(env) {
   const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY } = env;
