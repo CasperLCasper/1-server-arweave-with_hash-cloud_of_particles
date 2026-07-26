@@ -191,42 +191,36 @@ function buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, sn
   return m;
 }
 
-async function finalizeMintProcess(app, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue) {
+async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue) {
   const gw = ARWEAVE_GATEWAY;
   const imageUrl = serverData.image.id ? `${gw}${serverData.image.id}` : `local://${imageHash}`;
-  const costWei = serverData.storage?.costWei || "0";
   const costEth = serverData.storage?.costEth || "0";
 
   const localMeta = buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, snap, nativeSymbol);
   if (!videoBlob) delete localMeta.animation_url;
   const metaStr = JSON.stringify(localMeta, null, 2);
-  const finalContentHash = await calculateHashFromBlob(new Blob([metaStr]));
 
   const arweaveMeta = { ...localMeta, image: imageUrl, animation_url: serverData.video?.id ? `${gw}${serverData.video.id}` : undefined };
   if (!arweaveMeta.animation_url) delete arweaveMeta.animation_url;
 
+  // Augšupielādē metadata
   let metaId;
   try {
     const r = await uploadMetadataToArweave(arweaveMeta);
     metaId = r.id || r.cid;
     showToast('✅ Metadata uploaded to Arweave!', 'success');
   } catch (e) {
-    showToast('❌ Failed to upload metadata. Deposit will be refunded automatically.', 'error');
-    return false;
+    console.warn('⚠️ Metadata upload failed:', e.message);
   }
 
-  try {
-    const r = await apiFetch('/api/finalize-mint', {
-      method: 'POST',
-      body: JSON.stringify({ wallet: app.account, metadataUri: `${gw}${metaId}`, storageCostWei: costWei, contentHash: finalContentHash })
-    });
-    const d = await r.json();
-    if (!d.success) throw new Error(d.error || 'Finalize failed');
+  // Pārbauda finalize rezultātu no servera
+  if (serverData.finalize?.success) {
     showToast('✅ NFT finalized on blockchain!', 'success');
-  } catch (e) {
-    showToast('❌ Finalize failed. Refund will be processed automatically.', 'error');
+  } else if (serverData.finalize?.error) {
+    showToast('⚠️ Finalize pending. Will be processed automatically.', 'warning');
   }
 
+  // Saglabā ZIP ar failiem
   const metaBlob = new Blob([metaStr], { type: 'application/json' });
   await downloadAllFiles([
     { blob: imageBlob, filename: imageFileName },
@@ -235,8 +229,7 @@ async function finalizeMintProcess(app, serverData, imageHash, videoHash, imageB
   ]);
   showToast('✅ All files saved as ZIP!', 'success');
 
-  alert(`✅ NFT minted!\n\nTx: ${tx.hash}\nPrice: ${ethers.formatEther(txValue)} ETH\n(Storage: ${costEth} ETH)\n\n🔐 Image Hash: ${imageHash}\n🔐 Video Hash: ${videoHash}\n🔐 Content Hash: ${finalContentHash}\n${metaId ? '📄 Arweave Metadata: ' + metaId + '\n' : ''}${serverData.image?.id ? '🖼️ Arweave Image: ' + serverData.image.id + '\n' : ''}${serverData.video?.id ? '🎬 Arweave Video: ' + serverData.video.id : ''}`);
-  return true;
+  alert(`✅ NFT minted!\n\nTx: ${tx.hash}\nPrice: ${ethers.formatEther(txValue)} ETH\n(Storage: ${costEth} ETH)\n\n🔐 Image Hash: ${imageHash}\n🔐 Video Hash: ${videoHash}\n${metaId ? '📄 Arweave Metadata: ' + metaId + '\n' : ''}${serverData.image?.id ? '🖼️ Arweave Image: ' + serverData.image.id + '\n' : ''}${serverData.video?.id ? '🎬 Arweave Video: ' + serverData.video.id : ''}`);
 }
 
 function getNativeSymbol(app) {
@@ -362,7 +355,8 @@ const App = Object.assign({}, AppState, {
         return;
       }
 
-      await finalizeMintProcess(this, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue);
+      // Finalize-mint notiek automātiski caur prepare-nft.js (autoFinalize)
+      await handleMintSuccess(this, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue);
       await restoreAfterMint(this);
 
     } catch (error) {
