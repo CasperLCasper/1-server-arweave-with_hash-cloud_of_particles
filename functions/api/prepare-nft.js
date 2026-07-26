@@ -4,7 +4,6 @@ import { checkRateLimit } from "../_lib/rateLimit.js";
 import { TurboFactory, EthereumSigner } from '@ardrive/turbo-sdk';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
-import axios from 'axios';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'video/mp4', 'video/webm'];
 const MAX_SIZE = 50 * 1024 * 1024;
@@ -72,33 +71,6 @@ async function calculateStorageCost(turbo, totalBytes) {
   }
 }
 
-async function autoFinalize(request, userAddress, imageId, storageCostWei) {
-  try {
-    const url = new URL(request.url);
-    const finalizeUrl = `${url.protocol}//${url.host}/api/finalize-mint`;
-    
-    const res = await axios.post(finalizeUrl, {
-      wallet: userAddress,
-      metadataUri: `https://arweave.net/${imageId}`,
-      storageCostWei: storageCostWei,
-      contentHash: ethers.ZeroHash
-    }, {
-      headers: { Authorization: request.headers.get('Authorization') || '' }
-    });
-    
-    if (res.data?.success) {
-      console.log('✅ Auto-finalize successful!');
-      return { success: true, data: res.data };
-    } else {
-      console.warn('⚠️ Auto-finalize returned:', res.data);
-      return { success: false, error: res.data?.error || 'Unknown error' };
-    }
-  } catch (e) {
-    console.warn('⚠️ Auto-finalize failed, will be picked up by cleanup robot:', e.message);
-    return { success: false, error: e.message };
-  }
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -148,7 +120,6 @@ export async function onRequestPost(context) {
     let imageId = null, videoId = null, arweaveError = null;
     let totalBytesUploaded = 0;
     let storageCostWei = "0", storageCostEth = "0";
-    let finalizeResult = null;
 
     if (env.ARWEAVE_STORAGE_KEY) {
       try {
@@ -203,11 +174,7 @@ export async function onRequestPost(context) {
     }
 
     const arweaveSuccess = !!(imageId || videoId);
-
-    // VIENĪGAIS finalize-mint izsaukums - tikai no šejienes
-    if (arweaveSuccess && imageId) {
-      finalizeResult = await autoFinalize(request, user.address, imageId, storageCostWei);
-    } else {
+    if (!arweaveSuccess) {
       console.log('⚠️ Arweave upload failed. Refund will be processed by cleanup robot.');
     }
 
@@ -216,8 +183,7 @@ export async function onRequestPost(context) {
       image: { hash: imageHash, id: imageId || null, fileName: imageFile.name || 'snapshot.png', mimeType: imageFile.type || 'image/png', size: imageFile.size },
       video: videoBuffer ? { hash: videoHash, id: videoId || null, fileName: vid.name || 'video.webm', mimeType: vid.type || 'video/webm', size: vid.size || 0 } : null,
       arweave: { success: arweaveSuccess, error: arweaveError },
-      storage: { bytesUploaded: totalBytesUploaded, costWei: storageCostWei, costEth: storageCostEth },
-      finalize: finalizeResult || { success: false, error: 'Not attempted' }
+      storage: { bytesUploaded: totalBytesUploaded, costWei: storageCostWei, costEth: storageCostEth }
     };
 
     console.log(`✅ NFT preparation complete! Image hash: ${imageHash}`);
