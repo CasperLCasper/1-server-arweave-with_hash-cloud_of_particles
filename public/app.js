@@ -196,29 +196,28 @@ function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId
   const oldModal = document.getElementById('mintSuccessModal');
   if (oldModal) oldModal.remove();
 
-  // Izveido modal dinamiski
+  // Izveido modal dinamiski - browsera alert stilā ar zilu pogu
   const modal = document.createElement('div');
   modal.id = 'mintSuccessModal';
-  modal.style.cssText = 'display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10001; justify-content:center; align-items:center;';
+  modal.style.cssText = 'display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:10001; justify-content:center; align-items:center;';
   
   modal.innerHTML = `
-    <div style="background:#1a1a2e; border:1px solid #00ffcc; border-radius:12px; padding:30px 35px; max-width:700px; width:95%; color:#fff; font-family:'Courier New', monospace; box-shadow:0 0 40px rgba(0,255,204,0.3);">
-      <h3 style="color:#00ffcc; margin:0 0 20px 0; font-size:20px; text-align:center;">🎉 NFT Minted Successfully!</h3>
-      <div style="font-size:14px; line-height:2; word-break:break-all;">
-        <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">NFT minting:</span> <span style="color:#fff;">Successfully!</span></div>
-        <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">Arweave uploads:</span> <span style="color:#fff;">Successfully!</span></div>
-        <div style="margin:15px 0; border-top:1px solid #333;"></div>
-        <div style="margin-bottom:5px;"><span style="color:#888;">Tx:</span> <span style="color:#fff;">${tx.hash}</span></div>
-        <div style="margin-bottom:5px;"><span style="color:#888;">Price:</span> <span style="color:#00ffcc;">${ethers.formatEther(txValue)} ETH</span></div>
-        <div style="margin-bottom:5px;"><span style="color:#888;">(Storage:</span> <span style="color:#ffaa00;">${costEth} ETH</span>)</div>
-        <div style="margin:15px 0; border-top:1px solid #333;"></div>
-        <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Image Hash:</span> <span style="color:#fff;">${imageHash}</span></div>
-        <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Video Hash:</span> <span style="color:#fff;">${videoHash}</span></div>
-        ${metaId ? `<div style="margin-bottom:5px;"><span style="color:#888;">📄 Arweave Metadata:</span> <span style="color:#fff;">${metaId}</span></div>` : ''}
-        ${imageId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🖼️ Arweave Image:</span> <span style="color:#fff;">${imageId}</span></div>` : ''}
-        ${videoId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🎬 Arweave Video:</span> <span style="color:#fff;">${videoId}</span></div>` : ''}
+    <div style="background:#f0f0f0; border-radius:8px; padding:20px 25px; max-width:650px; width:90%; color:#000; font-family:Arial, sans-serif; font-size:13px; box-shadow:0 2px 15px rgba(0,0,0,0.3);">
+      <div style="margin-bottom:15px; line-height:1.6;">
+        <div style="margin-bottom:6px;">✅ NFT minting: Successfully!</div>
+        <div style="margin-bottom:6px;">✅ Arweave uploads: Successfully!</div>
+        <div style="margin:10px 0; border-top:1px solid #ccc;"></div>
+        <div style="margin-bottom:4px;">Tx: ${tx.hash}</div>
+        <div style="margin-bottom:4px;">Price: ${ethers.formatEther(txValue)} ETH</div>
+        <div style="margin-bottom:4px;">(Storage: ${costEth} ETH)</div>
+        <div style="margin:10px 0; border-top:1px solid #ccc;"></div>
+        <div style="margin-bottom:4px;">🔐 Image Hash: ${imageHash}</div>
+        <div style="margin-bottom:4px;">🔐 Video Hash: ${videoHash}</div>
+        ${metaId ? `<div style="margin-bottom:4px;">📄 Arweave Metadata: ${metaId}</div>` : ''}
+        ${imageId ? `<div style="margin-bottom:4px;">🖼️ Arweave Image: ${imageId}</div>` : ''}
+        ${videoId ? `<div style="margin-bottom:4px;">🎬 Arweave Video: ${videoId}</div>` : ''}
       </div>
-      <button id="mintSuccessOkBtn" style="display:block; margin:25px auto 0; padding:14px 60px; background:#00ffcc; color:#000; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; transition:all 0.2s;">OK</button>
+      <button id="mintSuccessOkBtn" style="display:block; margin:15px auto 0; padding:10px 45px; background:#0078d4; color:#fff; border:none; border-radius:6px; font-size:14px; font-family:Arial, sans-serif; cursor:pointer;">OK</button>
     </div>
   `;
   
