@@ -558,17 +558,19 @@ button.loading::after {
   width: 90%;
   color: #000;
   font-family: Arial, sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
 }
 
 .mint-success-body {
   margin-bottom: 15px;
   line-height: 1.6;
+  color: #000;
 }
 
 .mint-success-row {
   margin-bottom: 4px;
+  color: #000;
 }
 
 .mint-success-divider {
@@ -577,7 +579,7 @@ button.loading::after {
 }
 
 .mint-success-label {
-  color: #888;
+  color: #000;
 }
 
 .mint-success-value {
@@ -592,7 +594,7 @@ button.loading::after {
   color: #fff;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: Arial, sans-serif;
   cursor: pointer;
 }
