@@ -134,6 +134,15 @@
     </div>
   </div>
 
+  <!-- Custom Mint Success Modal -->
+  <div id="mintSuccessModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10001; justify-content:center; align-items:center;">
+    <div style="background:#1a1a2e; border:1px solid #00ffcc; border-radius:12px; padding:30px 35px; max-width:700px; width:95%; color:#fff; font-family:'Courier New', monospace; box-shadow:0 0 40px rgba(0,255,204,0.3);">
+      <h3 style="color:#00ffcc; margin:0 0 20px 0; font-size:20px; text-align:center;">🎉 NFT Minted Successfully!</h3>
+      <div id="mintSuccessContent" style="font-size:14px; line-height:2; word-break:break-all;"></div>
+      <button id="mintSuccessOkBtn" style="display:block; margin:25px auto 0; padding:14px 60px; background:#00ffcc; color:#000; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; transition:all 0.2s;">OK</button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js" integrity="sha384-JjzOKxQsr+Jhx75Ot1XldVFnWF2UCtB4Ig2JuEcuBt4VAdUG6alucV+sHrYjPn5C" crossorigin="anonymous"></script>
   <script type="module" src="/app.js"></script>
 </body>
