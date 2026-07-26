@@ -192,57 +192,48 @@ function buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, sn
 }
 
 function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, imageId, videoId) {
-  const content = document.getElementById('mintSuccessContent');
-  const modal = document.getElementById('mintSuccessModal');
-  const okBtn = document.getElementById('mintSuccessOkBtn');
+  // Noņem veco modalu, ja eksistē
+  const oldModal = document.getElementById('mintSuccessModal');
+  if (oldModal) oldModal.remove();
+
+  // Izveido modal dinamiski
+  const modal = document.createElement('div');
+  modal.id = 'mintSuccessModal';
+  modal.style.cssText = 'display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10001; justify-content:center; align-items:center;';
   
-  if (!content || !modal || !okBtn) {
-    const message = [
-      `✅ NFT minting: Successfully!`,
-      `✅ Arweave uploads: Successfully!`,
-      ``,
-      `Tx: ${tx.hash}`,
-      `Price: ${ethers.formatEther(txValue)} ETH`,
-      `(Storage: ${costEth} ETH)`,
-      ``,
-      `🔐 Image Hash: ${imageHash}`,
-      `🔐 Video Hash: ${videoHash}`,
-      metaId ? `📄 Arweave Metadata: ${metaId}` : '',
-      imageId ? `🖼️ Arweave Image: ${imageId}` : '',
-      videoId ? `🎬 Arweave Video: ${videoId}` : ''
-    ].filter(line => line !== '').join('\n');
-    alert(message);
-    return;
-  }
-  
-  content.innerHTML = `
-    <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">NFT minting:</span> <span style="color:#fff;">Successfully!</span></div>
-    <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">Arweave uploads:</span> <span style="color:#fff;">Successfully!</span></div>
-    <div style="margin:15px 0; border-top:1px solid #333;"></div>
-    <div style="margin-bottom:5px;"><span style="color:#888;">Tx:</span> <span style="color:#fff;">${tx.hash}</span></div>
-    <div style="margin-bottom:5px;"><span style="color:#888;">Price:</span> <span style="color:#00ffcc;">${ethers.formatEther(txValue)} ETH</span></div>
-    <div style="margin-bottom:5px;"><span style="color:#888;">(Storage:</span> <span style="color:#ffaa00;">${costEth} ETH</span>)</div>
-    <div style="margin:15px 0; border-top:1px solid #333;"></div>
-    <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Image Hash:</span> <span style="color:#fff;">${imageHash}</span></div>
-    <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Video Hash:</span> <span style="color:#fff;">${videoHash}</span></div>
-    ${metaId ? `<div style="margin-bottom:5px;"><span style="color:#888;">📄 Arweave Metadata:</span> <span style="color:#fff;">${metaId}</span></div>` : ''}
-    ${imageId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🖼️ Arweave Image:</span> <span style="color:#fff;">${imageId}</span></div>` : ''}
-    ${videoId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🎬 Arweave Video:</span> <span style="color:#fff;">${videoId}</span></div>` : ''}
+  modal.innerHTML = `
+    <div style="background:#1a1a2e; border:1px solid #00ffcc; border-radius:12px; padding:30px 35px; max-width:700px; width:95%; color:#fff; font-family:'Courier New', monospace; box-shadow:0 0 40px rgba(0,255,204,0.3);">
+      <h3 style="color:#00ffcc; margin:0 0 20px 0; font-size:20px; text-align:center;">🎉 NFT Minted Successfully!</h3>
+      <div style="font-size:14px; line-height:2; word-break:break-all;">
+        <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">NFT minting:</span> <span style="color:#fff;">Successfully!</span></div>
+        <div style="margin-bottom:8px;">✅ <span style="color:#00ffcc;">Arweave uploads:</span> <span style="color:#fff;">Successfully!</span></div>
+        <div style="margin:15px 0; border-top:1px solid #333;"></div>
+        <div style="margin-bottom:5px;"><span style="color:#888;">Tx:</span> <span style="color:#fff;">${tx.hash}</span></div>
+        <div style="margin-bottom:5px;"><span style="color:#888;">Price:</span> <span style="color:#00ffcc;">${ethers.formatEther(txValue)} ETH</span></div>
+        <div style="margin-bottom:5px;"><span style="color:#888;">(Storage:</span> <span style="color:#ffaa00;">${costEth} ETH</span>)</div>
+        <div style="margin:15px 0; border-top:1px solid #333;"></div>
+        <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Image Hash:</span> <span style="color:#fff;">${imageHash}</span></div>
+        <div style="margin-bottom:5px;"><span style="color:#888;">🔐 Video Hash:</span> <span style="color:#fff;">${videoHash}</span></div>
+        ${metaId ? `<div style="margin-bottom:5px;"><span style="color:#888;">📄 Arweave Metadata:</span> <span style="color:#fff;">${metaId}</span></div>` : ''}
+        ${imageId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🖼️ Arweave Image:</span> <span style="color:#fff;">${imageId}</span></div>` : ''}
+        ${videoId ? `<div style="margin-bottom:5px;"><span style="color:#888;">🎬 Arweave Video:</span> <span style="color:#fff;">${videoId}</span></div>` : ''}
+      </div>
+      <button id="mintSuccessOkBtn" style="display:block; margin:25px auto 0; padding:14px 60px; background:#00ffcc; color:#000; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; transition:all 0.2s;">OK</button>
+    </div>
   `;
   
-  modal.style.display = 'flex';
+  document.body.appendChild(modal);
   
-  okBtn.onclick = () => {
-    modal.style.display = 'none';
-  };
+  const okBtn = modal.querySelector('#mintSuccessOkBtn');
+  okBtn.onclick = () => modal.remove();
   
   modal.onclick = (e) => {
-    if (e.target === modal) modal.style.display = 'none';
+    if (e.target === modal) modal.remove();
   };
   
   const escHandler = (e) => {
     if (e.key === 'Escape') {
-      modal.style.display = 'none';
+      modal.remove();
       document.removeEventListener('keydown', escHandler);
     }
   };
