@@ -191,7 +191,7 @@ function buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, sn
   return m;
 }
 
-function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, imageId, videoId) {
+function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, imageId, videoId, finalContentHash) {
   const oldModal = document.getElementById('mintSuccessModal');
   if (oldModal) oldModal.remove();
 
@@ -210,6 +210,7 @@ function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId
         <div class="mint-success-divider"></div>
         <div class="mint-success-row"><span class="mint-success-label">🔐 Image Hash:</span> <span class="mint-success-value">${imageHash}</span></div>
         <div class="mint-success-row"><span class="mint-success-label">🔐 Video Hash:</span> <span class="mint-success-value">${videoHash}</span></div>
+        <div class="mint-success-row"><span class="mint-success-label">🔐 Content Hash:</span> <span class="mint-success-value">${finalContentHash}</span></div>
         ${metaId ? `<div class="mint-success-row"><span class="mint-success-label">📄 Arweave Metadata:</span> <span class="mint-success-value">${metaId}</span></div>` : ''}
         ${imageId ? `<div class="mint-success-row"><span class="mint-success-label">🖼️ Arweave Image:</span> <span class="mint-success-value">${imageId}</span></div>` : ''}
         ${videoId ? `<div class="mint-success-row"><span class="mint-success-label">🎬 Arweave Video:</span> <span class="mint-success-value">${videoId}</span></div>` : ''}
@@ -240,14 +241,19 @@ async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlo
   const gw = ARWEAVE_GATEWAY;
   const imageUrl = serverData.image.id ? `${gw}${serverData.image.id}` : `local://${imageHash}`;
   const costEth = serverData.storage?.costEth || "0";
+  const storageCostWei = serverData.storage?.costWei || "0";
 
   const localMeta = buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, snap, nativeSymbol);
   if (!videoBlob) delete localMeta.animation_url;
-  const metaStr = JSON.stringify(localMeta, null, 2);
 
   const arweaveMeta = { ...localMeta, image: imageUrl, animation_url: serverData.video?.id ? `${gw}${serverData.video.id}` : undefined };
   if (!arweaveMeta.animation_url) delete arweaveMeta.animation_url;
 
+  // 1. Aprēķina finalContentHash no localMeta (ZIP versija ar failu nosaukumiem)
+  const localMetaStr = JSON.stringify(localMeta, null, 2);
+  const finalContentHash = await calculateHashFromBlob(new Blob([localMetaStr]));
+
+  // 2. Augšupielādē metadata uz Arweave (arweaveMeta ar Arweave URL)
   let metaId;
   try {
     const r = await uploadMetadataToArweave(arweaveMeta);
@@ -255,15 +261,32 @@ async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlo
     showToast('✅ Metadata uploaded to Arweave!', 'success');
   } catch (e) {
     console.warn('⚠️ Metadata upload failed:', e.message);
+    showToast('❌ Failed to upload metadata. Refund will be processed automatically.', 'error');
+    return;
   }
 
-  if (serverData.finalize?.success) {
+  // 3. Finalize-mint ar contentHash no localMeta
+  const metadataUri = `${gw}${metaId}`;
+  try {
+    const finalizeRes = await apiFetch('/api/finalize-mint', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet: app.account,
+        metadataUri: metadataUri,
+        storageCostWei: storageCostWei,
+        contentHash: finalContentHash
+      })
+    });
+    const finalizeData = await finalizeRes.json();
+    if (!finalizeData.success) throw new Error(finalizeData.error || 'Finalize failed');
     showToast('✅ NFT finalized on blockchain!', 'success');
-  } else if (serverData.finalize?.error) {
-    showToast('⚠️ Finalize pending. Will be processed automatically.', 'warning');
+  } catch (finalizeError) {
+    console.error('Finalize failed:', finalizeError);
+    showToast('❌ Finalize failed. Refund will be processed automatically.', 'error');
   }
 
-  const metaBlob = new Blob([metaStr], { type: 'application/json' });
+  // 4. ZIP ar localMeta (failu nosaukumi, nevis URL)
+  const metaBlob = new Blob([localMetaStr], { type: 'application/json' });
   await downloadAllFiles([
     { blob: imageBlob, filename: imageFileName },
     { blob: metaBlob, filename: `metadata_${Date.now()}.json` },
@@ -271,7 +294,7 @@ async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlo
   ]);
   showToast('✅ All files saved as ZIP!', 'success');
 
-  showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, serverData.image?.id, serverData.video?.id);
+  showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, serverData.image?.id, serverData.video?.id, finalContentHash);
 }
 
 function getNativeSymbol(app) {
