@@ -192,38 +192,35 @@ function buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, sn
 }
 
 function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, imageId, videoId) {
-  // Noņem veco modalu, ja eksistē
   const oldModal = document.getElementById('mintSuccessModal');
   if (oldModal) oldModal.remove();
 
-  // Izveido modal dinamiski - browsera alert stilā ar zilu pogu
   const modal = document.createElement('div');
   modal.id = 'mintSuccessModal';
-  modal.style.cssText = 'display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:10001; justify-content:center; align-items:center;';
   
   modal.innerHTML = `
-    <div style="background:#f0f0f0; border-radius:8px; padding:20px 25px; max-width:650px; width:90%; color:#000; font-family:Arial, sans-serif; font-size:13px; box-shadow:0 2px 15px rgba(0,0,0,0.3);">
-      <div style="margin-bottom:15px; line-height:1.6;">
-        <div style="margin-bottom:6px;">✅ NFT minting: Successfully!</div>
-        <div style="margin-bottom:6px;">✅ Arweave uploads: Successfully!</div>
-        <div style="margin:10px 0; border-top:1px solid #ccc;"></div>
-        <div style="margin-bottom:4px;">Tx: ${tx.hash}</div>
-        <div style="margin-bottom:4px;">Price: ${ethers.formatEther(txValue)} ETH</div>
-        <div style="margin-bottom:4px;">(Storage: ${costEth} ETH)</div>
-        <div style="margin:10px 0; border-top:1px solid #ccc;"></div>
-        <div style="margin-bottom:4px;">🔐 Image Hash: ${imageHash}</div>
-        <div style="margin-bottom:4px;">🔐 Video Hash: ${videoHash}</div>
-        ${metaId ? `<div style="margin-bottom:4px;">📄 Arweave Metadata: ${metaId}</div>` : ''}
-        ${imageId ? `<div style="margin-bottom:4px;">🖼️ Arweave Image: ${imageId}</div>` : ''}
-        ${videoId ? `<div style="margin-bottom:4px;">🎬 Arweave Video: ${videoId}</div>` : ''}
+    <div class="mint-success-dialog">
+      <div class="mint-success-body">
+        <div class="mint-success-row">✅ NFT minting: Successfully!</div>
+        <div class="mint-success-row">✅ Arweave uploads: Successfully!</div>
+        <div class="mint-success-divider"></div>
+        <div class="mint-success-row"><span class="mint-success-label">Tx:</span> <span class="mint-success-value">${tx.hash}</span></div>
+        <div class="mint-success-row"><span class="mint-success-label">Price:</span> <span class="mint-success-value">${ethers.formatEther(txValue)} ETH</span></div>
+        <div class="mint-success-row"><span class="mint-success-label">(Storage:</span> <span class="mint-success-value">${costEth} ETH</span>)</div>
+        <div class="mint-success-divider"></div>
+        <div class="mint-success-row"><span class="mint-success-label">🔐 Image Hash:</span> <span class="mint-success-value">${imageHash}</span></div>
+        <div class="mint-success-row"><span class="mint-success-label">🔐 Video Hash:</span> <span class="mint-success-value">${videoHash}</span></div>
+        ${metaId ? `<div class="mint-success-row"><span class="mint-success-label">📄 Arweave Metadata:</span> <span class="mint-success-value">${metaId}</span></div>` : ''}
+        ${imageId ? `<div class="mint-success-row"><span class="mint-success-label">🖼️ Arweave Image:</span> <span class="mint-success-value">${imageId}</span></div>` : ''}
+        ${videoId ? `<div class="mint-success-row"><span class="mint-success-label">🎬 Arweave Video:</span> <span class="mint-success-value">${videoId}</span></div>` : ''}
       </div>
-      <button id="mintSuccessOkBtn" style="display:block; margin:15px auto 0; padding:10px 45px; background:#0078d4; color:#fff; border:none; border-radius:6px; font-size:14px; font-family:Arial, sans-serif; cursor:pointer;">OK</button>
+      <button class="mint-success-btn">OK</button>
     </div>
   `;
   
   document.body.appendChild(modal);
   
-  const okBtn = modal.querySelector('#mintSuccessOkBtn');
+  const okBtn = modal.querySelector('.mint-success-btn');
   okBtn.onclick = () => modal.remove();
   
   modal.onclick = (e) => {
