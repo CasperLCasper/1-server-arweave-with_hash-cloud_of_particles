@@ -52,6 +52,7 @@ function parseMetadataUri(uri) {
 async function executeRobotFinalize(robotSigner, contractAddress, { wallet, fullMetadataUri, storageCostWei, finalContentHash }) {
   const contractWithSigner = new ethers.Contract(contractAddress, WALLET_NFT_ABI, robotSigner);
   console.log('🤖 Finalize robot: calling finalizeMint...');
+  console.log('🔑 finalContentHash being sent to contract:', finalContentHash);
   const finalizeTx = await contractWithSigner.finalizeMint(wallet, fullMetadataUri, storageCostWei || 0, finalContentHash);
   console.log(`🤖 Finalize tx sent! Hash: ${finalizeTx.hash}`);
   await finalizeTx.wait();
@@ -92,10 +93,19 @@ export async function onRequestPost(context) {
     try { body = await request.json(); } catch { return new Response(JSON.stringify({ success: false, error: 'Invalid JSON' }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const { wallet, metadataUri, storageCostWei, contentHash } = body;
+    
+    // 🔍 DIAGNOSTIKA
+    console.log('📦 contentHash received:', contentHash);
+    console.log('📏 contentHash length:', contentHash ? contentHash.length : 'undefined');
+    console.log('📏 contentHash type:', typeof contentHash);
+    
     if (!wallet || !metadataUri || !ethers.isAddress(wallet)) return new Response(JSON.stringify({ success: false, error: 'Invalid input' }), { status: 400, headers: { "Content-Type": "application/json" } });
     if (user.address.toLowerCase() !== wallet.toLowerCase()) return new Response(JSON.stringify({ success: false, error: 'Unauthorized wallet' }), { status: 403, headers: { "Content-Type": "application/json" } });
 
     const finalContentHash = (contentHash && /^0x[0-9a-fA-F]{64}$/.test(contentHash)) ? contentHash : ethers.ZeroHash;
+    console.log('✅ Regex test:', /^0x[0-9a-fA-F]{64}$/.test(contentHash));
+    console.log('🔑 finalContentHash used:', finalContentHash);
+    
     const fullMetadataUri = parseMetadataUri(metadataUri);
     const { CONTRACT_ADDRESS, ROBOT_PRIVATE_KEY, ARWEAVE_STORAGE_KEY } = env;
     if (!CONTRACT_ADDRESS || !ROBOT_PRIVATE_KEY) return new Response(JSON.stringify({ success: false, error: 'Server configuration incomplete' }), { status: 500, headers: { "Content-Type": "application/json" } });
