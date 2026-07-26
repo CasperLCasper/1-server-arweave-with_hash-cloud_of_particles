@@ -191,6 +191,25 @@ function buildMetadata(app, imageFileName, videoFileName, tokenList, nftList, sn
   return m;
 }
 
+function showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, imageId, videoId) {
+  const message = [
+    `✅ NFT minting: Successfully!`,
+    `✅ Arweave uploads: Successfully!`,
+    ``,
+    `Tx: ${tx.hash}`,
+    `Price: ${ethers.formatEther(txValue)} ETH`,
+    `(Storage: ${costEth} ETH)`,
+    ``,
+    `🔐 Image Hash: ${imageHash}`,
+    `🔐 Video Hash: ${videoHash}`,
+    metaId ? `📄 Arweave Metadata: ${metaId}` : '',
+    imageId ? `🖼️ Arweave Image: ${imageId}` : '',
+    videoId ? `🎬 Arweave Video: ${videoId}` : ''
+  ].filter(line => line !== '').join('\n');
+  
+  alert(message);
+}
+
 async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue) {
   const gw = ARWEAVE_GATEWAY;
   const imageUrl = serverData.image.id ? `${gw}${serverData.image.id}` : `local://${imageHash}`;
@@ -203,7 +222,6 @@ async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlo
   const arweaveMeta = { ...localMeta, image: imageUrl, animation_url: serverData.video?.id ? `${gw}${serverData.video.id}` : undefined };
   if (!arweaveMeta.animation_url) delete arweaveMeta.animation_url;
 
-  // Augšupielādē metadata
   let metaId;
   try {
     const r = await uploadMetadataToArweave(arweaveMeta);
@@ -229,7 +247,8 @@ async function handleMintSuccess(app, serverData, imageHash, videoHash, imageBlo
   ]);
   showToast('✅ All files saved as ZIP!', 'success');
 
-  alert(`✅ NFT minted!\n\nTx: ${tx.hash}\nPrice: ${ethers.formatEther(txValue)} ETH\n(Storage: ${costEth} ETH)\n\n🔐 Image Hash: ${imageHash}\n🔐 Video Hash: ${videoHash}\n${metaId ? '📄 Arweave Metadata: ' + metaId + '\n' : ''}${serverData.image?.id ? '🖼️ Arweave Image: ' + serverData.image.id + '\n' : ''}${serverData.video?.id ? '🎬 Arweave Video: ' + serverData.video.id : ''}`);
+  // Parāda smuko alert logu
+  showMintSuccessAlert(tx, txValue, costEth, imageHash, videoHash, metaId, serverData.image?.id, serverData.video?.id);
 }
 
 function getNativeSymbol(app) {
@@ -247,6 +266,17 @@ async function restoreAfterMint(app) {
   app.account = await app.signer.getAddress();
   UI.accountDisplay.textContent = `Connected account: ${app.account}`;
   await app.renderSnapshot(app.currentVizChain);
+  
+  // Parāda asset tabulu
+  if (UI.tokenListContainer) {
+    UI.tokenListContainer.style.display = 'block';
+    updateTokenListUI(app.tokens);
+  }
+  app.showInfo = true;
+  
+  // Nomaina warning uz success ziņu
+  showWarning('', false);
+  showToast('✅ Your NFT has been minted successfully! Your files have been successfully uploaded to the Arweave vault!!', 'success');
 }
 
 // ============================================
@@ -320,17 +350,24 @@ const App = Object.assign({}, AppState, {
     this.showInfo = false;
 
     try {
-      if (!(await signAntiBotMessage(this.signer, this.account))) { showWarning('', false); return; }
+      if (!(await signAntiBotMessage(this.signer, this.account))) { 
+        showWarning('', false); 
+        return; 
+      }
 
       showToast('📸 Creating your NFT files...', 'info');
       const media = await captureMedia();
-      if (!media) { showWarning('', false); return; }
+      if (!media) { 
+        showWarning('', false); 
+        return; 
+      }
       const { imageBlob, imageFile, imageFileName, imageHash, videoBlob, videoFile, videoFileName, videoHash } = media;
       this.lastVideoBlob = videoBlob;
 
       const tempHash = ethers.keccak256(ethers.concat([ethers.toUtf8Bytes('WalletVisualizer'), imageHash, videoHash, ethers.toUtf8Bytes(this.account)]));
 
       if (!(await switchToBaseAndReauth(this))) {
+        showWarning('', false);
         await restoreAfterMint(this);
         return;
       }
@@ -357,15 +394,18 @@ const App = Object.assign({}, AppState, {
 
       // Finalize-mint notiek automātiski caur prepare-nft.js (autoFinalize)
       await handleMintSuccess(this, serverData, imageHash, videoHash, imageBlob, videoBlob, imageFileName, videoFileName, snap, nativeSymbol, tokenList, nftList, tx, txValue);
+      
+      // Noņem warning pirms pārlādēšanas
+      showWarning('', false);
       await restoreAfterMint(this);
 
     } catch (error) {
       console.error(error);
+      showWarning('', false);
       let msg = 'Something went wrong. Please try again.';
       if (error.message?.includes('User denied') || error.code === 'ACTION_REJECTED') msg = '🛑 Transaction was cancelled in your wallet.';
       else if (error.message?.includes('insufficient funds')) msg = '💰 Insufficient funds.';
       showToast('❌ ' + msg, 'error');
-      showWarning('', false);
       alert(msg);
       try { await restoreAfterMint(this); } catch (e) {}
     } finally {
