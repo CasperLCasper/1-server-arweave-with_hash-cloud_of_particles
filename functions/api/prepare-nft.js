@@ -33,8 +33,8 @@ async function initTurbo(env) {
   const signer = new EthereumSigner(env.ARWEAVE_STORAGE_KEY);
   return TurboFactory.authenticated({
     signer, token: 'base-eth', gatewayUrl: 'https://sepolia.base.org',
-    paymentServiceConfig: { url: 'https://payment.services.ar-io.dev/' },
-    uploadServiceConfig: { url: 'https://upload.services.ar-io.dev/' }
+    paymentServiceConfig: { url: 'https://payment.services.ar-io.dev' },
+    uploadServiceConfig: { url: 'https://upload.services.ar-io.dev' }
   });
 }
 
