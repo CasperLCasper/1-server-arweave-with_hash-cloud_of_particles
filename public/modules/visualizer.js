@@ -33,6 +33,7 @@ export function cleanup(app) {
   app.branches = [];
   app.leaves = [];
   app.glowingSeeds = [];
+  app._fallingParticles = [];
   app.particleCache.clear();
   if (app.ctx) app.ctx.clearRect(0, 0, UI.canvas.width, UI.canvas.height);
 }
@@ -67,11 +68,18 @@ export function createParticleCache(app, leaf) {
 // KOKA ĢENERĒŠANA
 // ============================================
 
+function ensureTreeTrunk(app) {
+  if (!app.treeTrunk) {
+    const W = app.canvasWidth || UI.canvas.width || 1920;
+    const H = app.canvasHeight || UI.canvas.height || 1080;
+    app.treeTrunk = { x: W / 2, y: H * 0.85, width: 15, height: 250 };
+  }
+}
+
 export function updateNFTCenters(app) {
+  ensureTreeTrunk(app);
   app.glowingSeeds = [];
   const nftTokens = app.tokens.filter(t => t.isNFT);
-  const W = app.canvasWidth || UI.canvas.width;
-  const H = app.canvasHeight || UI.canvas.height;
   
   nftTokens.forEach((nft, idx) => {
     const angle = seededRandomFloat(nft.address + 'seed_pos') * Math.PI * 2;
@@ -91,6 +99,7 @@ export function updateNFTCenters(app) {
 }
 
 function generateBranches(app) {
+  ensureTreeTrunk(app);
   app.branches = [];
   const tokens = app.tokens.filter(t => !t.isNFT);
   const seedBase = (app.account || '') + String(app.ethBalance) + String(app.txCount);
@@ -102,7 +111,7 @@ function generateBranches(app) {
   const mainBranchCount = Math.min(8, Math.max(3, tokens.length));
   
   for (let i = 0; i < mainBranchCount; i++) {
-    const angle = -Math.PI / 2 + (i / (mainBranchCount - 1)) * Math.PI * 0.7 - Math.PI * 0.35;
+    const angle = -Math.PI / 2 + (i / Math.max(1, mainBranchCount - 1)) * Math.PI * 0.7 - Math.PI * 0.35;
     const length = trunkHeight * (0.4 + seededRandomFloat(seedBase + i + 'len') * 0.5);
     const thickness = 3 + (i < tokens.length ? Math.min(tokens[i]?.balance || 1, 20) / 20 * 8 : 3);
     const hue = (hashStringToInt((tokens[i]?.address || '') + seedBase + i) % 120) + 80;
@@ -150,15 +159,14 @@ function generateBranches(app) {
 function generateLeaves(app) {
   app.leaves = [];
   const seedBase = (app.account || '') + String(app.ethBalance) + String(app.txCount);
-  const txFactor = Math.min(1 + Math.log(app.txCount + 1) / 15, 2.0);
+  const txFactor = Math.min(1 + Math.log(Math.max(1, app.txCount)) / 15, 2.0);
   const leafCount = Math.min(MAX_PARTICLES, 40 + app.tokens.filter(t => !t.isNFT).length * 10);
+  const branchCount = Math.max(1, app.branches.length);
   
   for (let i = 0; i < leafCount; i++) {
-    // Piesaista lapu kādam zaram
-    const branchIdx = i % Math.max(1, app.branches.length);
+    const branchIdx = i % branchCount;
     const branch = app.branches[branchIdx];
     
-    // Pozīcija gar zaru
     const t = 0.2 + seededRandomFloat(seedBase + i + 'leaf_t') * 0.8;
     const perpAngle = branch.angle + Math.PI / 2;
     const spread = (seededRandomFloat(seedBase + i + 'leaf_spread') - 0.5) * 60;
@@ -204,6 +212,7 @@ function animateLeaves(app, txSpeedFactor) {
 }
 
 function animateGlowingSeeds(app, txSpeedFactor) {
+  ensureTreeTrunk(app);
   for (const seed of app.glowingSeeds) {
     seed.angle += seed.orbitSpeed * txSpeedFactor;
     seed.x = app.treeTrunk.x + Math.cos(seed.angle) * seed.orbitRadius;
@@ -217,6 +226,7 @@ function animateGlowingSeeds(app, txSpeedFactor) {
 // ============================================
 
 function drawTrunk(ctx, app) {
+  ensureTreeTrunk(app);
   const tx = app.treeTrunk.x;
   const ty = app.treeTrunk.y;
   const th = app.treeTrunk.height;
@@ -268,7 +278,6 @@ function drawBranches(ctx, app, frame) {
     ctx.beginPath();
     ctx.moveTo(branch.startX, branch.startY);
     
-    // Neliela viļņošanās
     const midX = (branch.startX + branch.endX) / 2 + Math.sin(frame * 0.02 + branch.angle) * 5;
     const midY = (branch.startY + branch.endY) / 2 + Math.cos(frame * 0.02 + branch.angle) * 3;
     
@@ -316,19 +325,19 @@ function drawGlowingSeeds(ctx, app, frame) {
 }
 
 function drawFallingParticles(ctx, app, frame, W, H) {
-  // Krītošas gaismas daļiņas no zariem
+  if (!app._fallingParticles) app._fallingParticles = [];
+  const branchCount = Math.max(1, app.branches.length);
   const particleCount = 15 + Math.floor(app.txCount / 10);
   
   for (let i = 0; i < particleCount; i++) {
-    if (!app._fallingParticles) app._fallingParticles = [];
     if (!app._fallingParticles[i]) {
-      const branch = app.branches[i % Math.max(1, app.branches.length)];
+      const branch = app.branches[i % branchCount];
       app._fallingParticles[i] = {
-        x: branch.endX + (Math.random() - 0.5) * 40,
-        y: branch.endY,
+        x: branch ? branch.endX + (Math.random() - 0.5) * 40 : W / 2,
+        y: branch ? branch.endY : H * 0.3,
         r: 1 + Math.random() * 2,
         speed: 0.5 + Math.random() * 1.5,
-        hue: branch.hue + Math.random() * 40,
+        hue: branch ? branch.hue + Math.random() * 40 : 120,
         life: 1,
         decay: 0.003 + Math.random() * 0.007
       };
@@ -339,12 +348,12 @@ function drawFallingParticles(ctx, app, frame, W, H) {
     p.life -= p.decay;
     
     if (p.life <= 0 || p.y > H + 50) {
-      const branch = app.branches[i % Math.max(1, app.branches.length)];
-      p.x = branch.endX + (Math.random() - 0.5) * 40;
-      p.y = branch.endY;
+      const branch = app.branches[i % branchCount];
+      p.x = branch ? branch.endX + (Math.random() - 0.5) * 40 : W / 2;
+      p.y = branch ? branch.endY : H * 0.3;
       p.life = 1;
       p.speed = 0.5 + Math.random() * 1.5;
-      p.hue = branch.hue + Math.random() * 40;
+      p.hue = branch ? branch.hue + Math.random() * 40 : 120;
     }
     
     if (p.life > 0) {
@@ -385,7 +394,7 @@ export function drawFrame(app, frame, showTokensFrame) {
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, W, H);
   
-  const txSpeedFactor = Math.min(1 + Math.log(app.txCount + 1) / 15, 2.0);
+  const txSpeedFactor = Math.min(1 + Math.log(Math.max(1, app.txCount + 1)) / 15, 2.0);
   
   animateLeaves(app, txSpeedFactor);
   animateGlowingSeeds(app, txSpeedFactor);
@@ -400,7 +409,7 @@ export function drawFrame(app, frame, showTokensFrame) {
   drawTrunk(ctx, app);
   
   if (!VIZ_LOW_POWER_MODE || frame % 2 === 0) {
-    addon.drawExtraEffects(ctx, W, H, frame, app.leaves, app.treeTrunk.x, app.treeTrunk.y);
+    addon.drawExtraEffects(ctx, W, H, frame, app.leaves, app.treeTrunk?.x || W / 2, app.treeTrunk?.y || H * 0.85);
   }
   if (showTokensFrame && app.showInfo) drawOverlayText(ctx, app, addon);
 }
@@ -419,16 +428,15 @@ export function stopAnimation(app) {
 // ============================================
 
 export async function initParticlesOnce(app) {
-  const W = app.canvasWidth || UI.canvas.width;
-  const H = app.canvasHeight || UI.canvas.height;
+  ensureTreeTrunk(app);
   
-  // Koka stumbra pozīcija
-  app.treeTrunk = {
-    x: W / 2,
-    y: H * 0.85,
-    width: 15 + Math.min(app.ethBalance / 0.1, 1) * 20,
-    height: 250 + Math.min(app.txCount / 50, 1) * 200
-  };
+  // Atjauno stumbra izmērus pēc datiem
+  const W = app.canvasWidth || UI.canvas.width || 1920;
+  const H = app.canvasHeight || UI.canvas.height || 1080;
+  app.treeTrunk.x = W / 2;
+  app.treeTrunk.y = H * 0.85;
+  app.treeTrunk.width = 15 + Math.min(Math.max(0, app.ethBalance) / 0.1, 1) * 20;
+  app.treeTrunk.height = 250 + Math.min(app.txCount / 50, 1) * 200;
   
   app._fallingParticles = [];
   
@@ -453,6 +461,9 @@ export async function renderSnapshot(app, chain) {
   app.glowingSeeds = [];
   app.branches = [];
   app.leaves = [];
+  
+  // Nodrošina treeTrunk uzreiz
+  ensureTreeTrunk(app);
   
   setButtonLoading(UI.renderBtn, true);
   stopAnimation(app);
